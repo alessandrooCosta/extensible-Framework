@@ -45,7 +45,7 @@ Ext.define("EAM.custom.external_wsjobs", {
               } 
               if (!Ext.isEmpty(vWoDesc)) { 
                 vFormPanel.setFldValue('udfchar02',vWoDesc,true); 
-                vFormPanel.setFldValue('relatedworkorder',vWoDesc, true);
+                //vFormPanel.setFldValue('relatedworkorder',vWoDesc, true);
               } 
               if (!Ext.isEmpty(vWoDesc2)) {
                   vFormPanel.setFldValue('udfchar03',vWoDesc2, true);
