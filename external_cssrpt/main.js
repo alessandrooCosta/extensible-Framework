@@ -27,8 +27,6 @@ Ext.define("EAM.custom.external_cssrpt", {
           var usernameToken = xmlDoc.createElement("wsse:UsernameToken");
           var username = xmlDoc.createElement("wsse:Username");
           var password = xmlDoc.createElement("wsse:Password");
-          // username.textContent = "AATAIDE@IBNQI1720580460_DEM";
-          // password.textContent = "Asset@2025";
           username.textContent = "ACOSTA@IBNQI1720580460_DEM";
           password.textContent = "Asset@25";
           usernameToken.appendChild(username);
@@ -139,8 +137,6 @@ Ext.define("EAM.custom.external_cssrpt", {
               var usernameToken = xmlDoc.createElement("wsse:UsernameToken");
               var username = xmlDoc.createElement("wsse:Username");
               var password = xmlDoc.createElement("wsse:Password");
-              // username.textContent = "AATAIDE@IBNQI1720580460_DEM";
-              // password.textContent = "Asset@2025";
               username.textContent = "ACOSTA@IBNQI1720580460_DEM";
               password.textContent = "Asset@25";
               usernameToken.appendChild(username);
