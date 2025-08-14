@@ -87,7 +87,7 @@ Ext.define("EAM.custom.external_cssrpt", {
                 var responseXml = parser.parseFromString(response.responseText, "text/xml");
                 var ns = "http://schemas.datastream.net/MP_fields";
 
-                var unidadeElement = responseXml.getElementsByTagNameNS(ns, "UDFCHAR01");
+                var unidadeElement = responseXml.getElementsByTagNameNS(ns, "UDFCHAR06");
 
                 if (unidadeElement.length > 0 && unidadeElement[0].textContent.trim() !== '') {
                   var unidadeCodigo = unidadeElement[0].textContent.trim();
