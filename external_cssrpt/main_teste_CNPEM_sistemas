@@ -1,0 +1,204 @@
+Ext.define("EAM.custom.external_cssrpt", {
+  extend: "EAM.custom.AbstractExtensibleFramework",
+
+  getSelectors: function () {
+    return {
+        '[extensibleFramework] [tabName=HDR] [name=equipment]': {
+            customonblur: function () {
+                var vFormPanel = EAM.Utils.getCurrentTab().getFormPanel();
+                var equipmentCode = vFormPanel.getFldValue('equipment');
+                if (!equipmentCode || equipmentCode.trim() === '') return;
+        
+                var tenant = "IBNQI1720580460_DEM"; 
+                var organization = "IBNQI";
+                var orgCode = "C001";
+        
+                function tryAsEquipment(code) {
+                    var xmlDoc = document.implementation.createDocument("", "", null);
+                    var envelope = xmlDoc.createElementNS("http://schemas.xmlsoap.org/soap/envelope/", "soapenv:Envelope");
+                    envelope.setAttribute("xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
+                    envelope.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        
+                    var header = xmlDoc.createElement("soapenv:Header");
+                    var tenantElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Tenant");
+                    tenantElem.textContent = tenant;
+                    header.appendChild(tenantElem);
+                    var orgElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Organization");
+                    orgElem.textContent = organization;
+                    header.appendChild(orgElem);
+                    envelope.appendChild(header);
+        
+                    var body = xmlDoc.createElement("soapenv:Body");
+                    var mpFunction = xmlDoc.createElementNS("http://schemas.datastream.net/MP_functions/MP0302_001", "MP0302_GetAssetEquipment_001");
+                    mpFunction.setAttribute("verb", "Get");
+                    mpFunction.setAttribute("noun", "AssetEquipment");
+                    mpFunction.setAttribute("version", "001");
+        
+                    var assetID = xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "ASSETID");
+                    var orgID = xmlDoc.createElement("ORGANIZATIONID");
+                    var orgCodeElem = xmlDoc.createElement("ORGANIZATIONCODE");
+                    orgCodeElem.textContent = orgCode;
+                    orgID.appendChild(orgCodeElem);
+                    assetID.appendChild(orgID);
+        
+                    var eqCodeElem = xmlDoc.createElement("EQUIPMENTCODE");
+                    eqCodeElem.textContent = code.trim();
+                    assetID.appendChild(eqCodeElem);
+        
+                    mpFunction.appendChild(assetID);
+                    body.appendChild(mpFunction);
+                    envelope.appendChild(body);
+                    xmlDoc.appendChild(envelope);
+        
+                    return new XMLSerializer().serializeToString(xmlDoc);
+                }
+        
+                function tryAsLocation(code) {
+                    var xmlDoc = document.implementation.createDocument("", "", null);
+                    var envelope = xmlDoc.createElementNS("http://schemas.xmlsoap.org/soap/envelope/", "soapenv:Envelope");
+                    envelope.setAttribute("xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
+                    envelope.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        
+                    var header = xmlDoc.createElement("soapenv:Header");
+                    var tenantElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Tenant");
+                    tenantElem.textContent = tenant;
+                    header.appendChild(tenantElem);
+                    var orgElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Organization");
+                    orgElem.textContent = organization;
+                    header.appendChild(orgElem);
+                    envelope.appendChild(header);
+        
+                    var body = xmlDoc.createElement("soapenv:Body");
+                    var mpFunction = xmlDoc.createElementNS("http://schemas.datastream.net/MP_functions/MP0318_001", "MP0318_GetLocation_001");
+                    mpFunction.setAttribute("verb", "Get");
+                    mpFunction.setAttribute("noun", "Location");
+                    mpFunction.setAttribute("version", "001");
+        
+                    var locationID = xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "LOCATIONID");
+                    var orgID = xmlDoc.createElement("ORGANIZATIONID");
+                    var orgCodeElem = xmlDoc.createElement("ORGANIZATIONCODE");
+                    orgCodeElem.textContent = orgCode;
+                    orgID.appendChild(orgCodeElem);
+                    locationID.appendChild(orgID);
+        
+                    var locCodeElem = xmlDoc.createElement("LOCATIONCODE");
+                    locCodeElem.textContent = code.trim();
+                    locationID.appendChild(locCodeElem);
+        
+                    mpFunction.appendChild(locationID);
+                    body.appendChild(mpFunction);
+                    envelope.appendChild(body);
+                    xmlDoc.appendChild(envelope);
+        
+                    return new XMLSerializer().serializeToString(xmlDoc);
+                }
+        
+                function tryAsSystem(code) {
+                    var xmlDoc = document.implementation.createDocument("", "", null);
+                    var envelope = xmlDoc.createElementNS("http://schemas.xmlsoap.org/soap/envelope/", "soapenv:Envelope");
+                    envelope.setAttribute("xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
+                    envelope.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        
+                    var header = xmlDoc.createElement("soapenv:Header");
+                    var tenantElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Tenant");
+                    tenantElem.textContent = tenant;
+                    header.appendChild(tenantElem);
+                    var orgElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Organization");
+                    orgElem.textContent = organization;
+                    header.appendChild(orgElem);
+                    envelope.appendChild(header);
+        
+                    var body = xmlDoc.createElement("soapenv:Body");
+                    var mpFunction = xmlDoc.createElementNS("http://schemas.datastream.net/MP_functions/MP0312_001", "MP0312_GetSystemEquipment_001");
+                    mpFunction.setAttribute("verb", "Get");
+                    mpFunction.setAttribute("version", "001");
+        
+                    var systemID = xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "SYSTEMID");
+                    var sysCodeElem = xmlDoc.createElement("SYSTEMID");
+                    sysCodeElem.textContent = code.trim();
+                    systemID.appendChild(sysCodeElem);
+        
+                    mpFunction.appendChild(systemID);
+                    body.appendChild(mpFunction);
+                    envelope.appendChild(body);
+                    xmlDoc.appendChild(envelope);
+        
+                    return new XMLSerializer().serializeToString(xmlDoc);
+                }
+        
+                function makeSOAPRequest(soapRequest, soapAction, nextLookup) {
+                    return Ext.Ajax.request({
+                        url: "https://us1.eam.hxgnsmartcloud.com/axis/services/EWSConnector",
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "text/xml; charset=utf-8",
+                            "SOAPAction": soapAction,
+                            "x-api-key": "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36"
+                        },
+                        xmlData: soapRequest,
+                        success: function (response) {
+                            try {
+                                var parser = new DOMParser();
+                                var responseXml = parser.parseFromString(response.responseText, "text/xml");
+                                var ns = "http://schemas.datastream.net/MP_fields";
+                                var description = "";
+        
+                                var nodes = responseXml.getElementsByTagNameNS(ns, "*");
+                                for (var i = 0; i < nodes.length; i++) {
+                                    if (nodes[i].localName === "DESCRIPTION") {
+                                        description = nodes[i].textContent.trim();
+                                        break;
+                                    }
+                                }
+        
+                                if (description) {
+                                    vFormPanel.setFldValue('udfchar12', description, true);
+                                } else {
+                                    nextLookup();
+                                }
+                            } catch (e) {
+                                console.error("Erro ao processar resposta SOAP:", e);
+                                nextLookup();
+                            }
+                        },
+                        failure: function () {
+                            nextLookup();
+                        }
+                    });
+                }
+        
+                function lookupSystem() {
+                    console.log("Tentando buscar como sistema:", equipmentCode.trim());
+                    var systemSoapRequest = tryAsSystem(equipmentCode);
+                    makeSOAPRequest(systemSoapRequest, "http://schemas.datastream.net/MP_functions/MP0312_001/MP0312_GetSystemEquipment_001", function () {
+                        Ext.Msg.alert('Aviso', 'Falha na consulta do sistema');
+                    });
+                }
+        
+                function lookupLocation() {
+                    console.log("Tentando buscar como localização:", equipmentCode.trim());
+                    var locationSoapRequest = tryAsLocation(equipmentCode);
+                    makeSOAPRequest(locationSoapRequest, "http://schemas.datastream.net/MP_functions/MP0019_001/MP0318_GetLocation_001", lookupSystem);
+                }
+        
+                console.log("Tentando buscar como equipamento:", equipmentCode.trim());
+                var equipmentSoapRequest = tryAsEquipment(equipmentCode);
+                makeSOAPRequest(equipmentSoapRequest, "http://schemas.datastream.net/MP_functions/MP0302_001/MP0302_GetAssetEquipment_001", lookupLocation);
+            }
+        },
+        
+ 
+          
+                
+
+
+
+
+
+
+
+    }
+
+  }
+
+});

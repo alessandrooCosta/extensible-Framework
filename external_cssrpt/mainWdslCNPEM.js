@@ -4,15 +4,15 @@ Ext.define("EAM.custom.external_cssrpt", {
   getSelectors: function () {
     return {
  
-      '[extensibleFramework] [tabName=HDR] [name=equipment]': {
+'[extensibleFramework] [tabName=HDR] [name=equipment]': {
         customonblur: function () {
           var vFormPanel = EAM.Utils.getCurrentTab().getFormPanel();
           var equipmentCode = vFormPanel.getFldValue('equipment');
           if (!equipmentCode || equipmentCode.trim() === '') return;
 
-          var tenant = "IBNQI1720580460_DEM"; 
-            var organization = "IBNQI";
-            var orgCode = "C001";
+          var tenant = "BVNPM1735306475_TST"; 
+            var organization = "*";
+            var orgCode = "CNPEM";
 
           function tryAsEquipment(code) {
             var xmlDoc = document.implementation.createDocument("", "", null);
@@ -109,7 +109,7 @@ Ext.define("EAM.custom.external_cssrpt", {
               headers: {
                 "Content-Type": "text/xml; charset=utf-8",
                 "SOAPAction": soapAction,
-                "x-api-key": "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36"
+                "x-api-key": "fe57908549-ce74-4d02-a524-bc15488f20fd"
               },
               xmlData: soapRequest,
               success: function (response) {
@@ -197,6 +197,14 @@ Ext.define("EAM.custom.external_cssrpt", {
       },
 
 
+
+
+
+
+
+
+
+
 // DEPARTAMENTOS
 '[extensibleFramework] [tabName=HDR] [name=udfchar05]': {
   customonblur: function () {
@@ -204,7 +212,7 @@ Ext.define("EAM.custom.external_cssrpt", {
     var deptCode = vFormPanel.getFldValue('udfchar05');
     if (!deptCode || deptCode.trim() === '') return;
 
-    var tenant = "IBNQI1720580460_DEM";
+    var tenant = "BVNPM1735306475_TST";
     var organization = "*";
 
     function buildSoapRequest(departmentCode) {
@@ -270,7 +278,7 @@ Ext.define("EAM.custom.external_cssrpt", {
             headers: {
               "Content-Type": "text/xml; charset=utf-8",
               "SOAPAction": "http://schemas.datastream.net/MP_functions/MP0617_001/MP0617_GetDepartment_001",
-              "x-api-key": "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36"
+              "x-api-key": "fe57908549-ce74-4d02-a524-bc15488f20fd"
             },
             xmlData: soapRequestUnidade,
             success: function (response) {
@@ -317,7 +325,7 @@ Ext.define("EAM.custom.external_cssrpt", {
       headers: {
         "Content-Type": "text/xml; charset=utf-8",
         "SOAPAction": "http://schemas.datastream.net/MP_functions/MP0617_001/MP0617_GetDepartment_001",
-        "x-api-key": "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36"
+        "x-api-key": "fe57908549-ce74-4d02-a524-bc15488f20fd"
       },
       xmlData: soapRequest,
       success: function (response) {
@@ -337,7 +345,7 @@ Ext.define("EAM.custom.external_cssrpt", {
         customonblur: function () {
           var vFormPanel = EAM.Utils.getCurrentTab().getFormPanel();
 
-          var tenant = "IBNQI1720580460_DEM";
+          var tenant = "BVNPM1735306475_TST";
           var organization = "*";
 
           var fields = [
@@ -419,7 +427,7 @@ Ext.define("EAM.custom.external_cssrpt", {
               headers: {
                 "Content-Type": "text/xml; charset=utf-8",
                 "SOAPAction": "http://schemas.datastream.net/MP_functions/MP0674_001/MP0674_GetDescription_001",
-                "x-api-key": "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36" 
+                "x-api-key": "fe57908549-ce74-4d02-a524-bc15488f20fd" 
               },
               xmlData: soapRequest,
               success: function (response) {
@@ -429,10 +437,10 @@ Ext.define("EAM.custom.external_cssrpt", {
 
                   var ns = "http://schemas.datastream.net/MP_fields";
                   var translatedElements = responseXml.getElementsByTagNameNS(ns, "TRANSLATEDTEXT");
-
                   if (translatedElements.length > 0) {
                     var translatedText = translatedElements[0].textContent;
                     vFormPanel.setFldValue(pair.to, translatedText, true);
+                    console.log(response);
                   } else {
                     // console.warn("Sem resultado para o campo: " + pair.from);
                   }
