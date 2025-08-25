@@ -1,0 +1,708 @@
+// Define uma classe ExtJS customizada para o Extensible Framework do EAM
+Ext.define("EAM.custom.external_cssrpt", {
+    // Herda da classe base do framework extensível do EAM
+    extend: "EAM.custom.AbstractExtensibleFramework",
+  
+    // Método obrigatório que retorna os seletores (mapeamentos de componentes → handlers)
+    getSelectors: function () {
+      return {
+  
+        // =========================
+        // EQUIPAMENTOS / LOCALIZAÇÕES / SISTEMAS
+        // =========================
+        // Seleciona o campo 'equipment' na aba HDR para rodar lógica ao perder foco
+        '[extensibleFramework] [tabName=HDR] [name=equipment]': {
+          // Handler disparado no onBlur do campo
+          customonblur: function () {
+            // Obtém o form panel da aba atual
+            var vFormPanel    = EAM.Utils.getCurrentTab().getFormPanel();
+            // Lê o valor digitado no campo 'equipment'
+            var equipmentCode = vFormPanel.getFldValue('equipment');
+            // Se estiver vazio ou só espaços, sai sem fazer nada
+            if (!equipmentCode || equipmentCode.trim() === '') return;
+
+            // ---------- Configurações fixas dessa integração ----------
+            var tenant       = "BVNPM1735306475_TST"; // Tenant (ambiente) de execução
+            var organization = "*";                   // Cabeçalho 'Organization' (escopo)
+            var orgCode      = "CNPEM";               // Organização para Asset/Location
+            var systemOrg    = orgCode;               // Organização usada para System
+            var API_KEY      = "fe57908549-ce74-4d02-a524-bc15488f20fd"; // Chave API
+
+            // ---------- Função utilitária para montar o envelope SOAP ----------
+            function buildEnvelope() {
+              // Cria um documento XML vazio
+              var xmlDoc = document.implementation.createDocument("", "", null);
+              // Cria o elemento Envelope com namespace SOAP
+              var env = xmlDoc.createElementNS("http://schemas.xmlsoap.org/soap/envelope/", "soapenv:Envelope");
+              // Declara namespaces auxiliares XSD/XSI
+              env.setAttribute("xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
+              env.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+  
+              // Cria o Header do SOAP
+              var header = xmlDoc.createElement("soapenv:Header");
+              // Adiciona o cabeçalho Tenant específico do EAM
+              var tenantElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Tenant");
+              tenantElem.textContent = tenant;
+              header.appendChild(tenantElem);
+              // Adiciona o cabeçalho Organization específico do EAM
+              var orgElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Organization");
+              orgElem.textContent = organization;
+              header.appendChild(orgElem);
+              // Anexa o Header ao Envelope
+              env.appendChild(header);
+  
+              // Cria o corpo (Body) do SOAP onde irão as funções MP_*
+              var body = xmlDoc.createElement("soapenv:Body");
+              env.appendChild(body);
+              // Anexa o Envelope ao documento
+              xmlDoc.appendChild(env);
+              // Retorna o doc e a referência ao Body para uso posterior
+              return { xmlDoc: xmlDoc, body: body };
+            }
+
+            // ---------- Extrai mensagens de Fault de uma resposta SOAP ----------
+            function parseFaultInfo(text) {
+              try {
+                // Converte o texto em XML
+                var xml = (new DOMParser()).parseFromString(text, "text/xml");
+                // Procura pelo nó <Fault> (SOAP Fault)
+                var faults = xml.getElementsByTagName("Fault");
+                if (faults && faults.length) {
+                  // Dentro de Fault, pega o <faultstring> com a mensagem
+                  var fs = faults[0].getElementsByTagName("faultstring");
+                  return fs && fs.length ? (fs[0].textContent || "").trim() : "SOAP Fault";
+                }
+              } catch(e){}
+              // Se não achar nada, retorna string vazia
+              return "";
+            }
+
+            // ---------- Atualiza o campo de descrição quando encontrada ----------
+            function finishWithDesc(desc) {
+              // Se existe descrição, grava em udfchar12
+              if (desc) vFormPanel.setFldValue('udfchar12', desc, true);
+            }
+
+            // ---------- Utilitário: pega texto de um filho específico em um container NS ----------
+            function parseFirstChildText(nsXml, tagNS, containerTag, wantedChild) {
+              // Busca o container (ex.: ASSETID, LOCATIONID, SYSTEMID)
+              var nodes = nsXml.getElementsByTagNameNS(tagNS, containerTag);
+              if (!nodes || !nodes.length) return "";
+              // Itera filhos do container
+              var kids = nodes[0].childNodes || [];
+              for (var i = 0; i < kids.length; i++) {
+                // Quando o nome local do filho for o desejado (DESCRIPTION), retorna o texto
+                if (kids[i].localName === wantedChild) {
+                  return (kids[i].textContent || "").trim();
+                }
+              }
+              // Não achou: vazio
+              return "";
+            }
+
+            // ---------- Monta requisição SOAP para MP0302_GetAssetEquipment_001 ----------
+            function buildAssetRequest(code) {
+              var b  = buildEnvelope(); // envelope + body
+              // Cria o elemento da função MP0302_001
+              var mp = b.xmlDoc.createElementNS("http://schemas.datastream.net/MP_functions/MP0302_001", "MP0302_GetAssetEquipment_001");
+              mp.setAttribute("verb", "Get");
+              mp.setAttribute("noun", "AssetEquipment");
+              mp.setAttribute("version", "001");
+  
+              // Monta o ASSETID (identificador)
+              var id  = b.xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "ASSETID");
+              // ORGANIZATIONID → ORGANIZATIONCODE (org de consulta)
+              var oid = b.xmlDoc.createElement("ORGANIZATIONID");
+              var oc  = b.xmlDoc.createElement("ORGANIZATIONCODE");
+              oc.textContent = orgCode;
+              oid.appendChild(oc);
+              id.appendChild(oid);
+  
+              // EQUIPMENTCODE com o valor digitado
+              var eq  = b.xmlDoc.createElement("EQUIPMENTCODE");
+              eq.textContent = code.trim();
+              id.appendChild(eq);
+  
+              // Encaixa o ASSETID dentro da função
+              mp.appendChild(id);
+              // Encaixa a função no Body
+              b.body.appendChild(mp);
+              // Serializa o XML em string para envio
+              return new XMLSerializer().serializeToString(b.xmlDoc);
+            }
+
+            // ---------- Monta requisição SOAP para MP0318_GetLocation_001 ----------
+            function buildLocationRequest(code) {
+              var b  = buildEnvelope();
+              // Cria o elemento da função MP0318_001
+              var mp = b.xmlDoc.createElementNS("http://schemas.datastream.net/MP_functions/MP0318_001", "MP0318_GetLocation_001");
+              mp.setAttribute("verb", "Get");
+              mp.setAttribute("noun", "Location");
+              mp.setAttribute("version", "001");
+  
+              // Monta o LOCATIONID
+              var id  = b.xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "LOCATIONID");
+              var oid = b.xmlDoc.createElement("ORGANIZATIONID");
+              var oc  = b.xmlDoc.createElement("ORGANIZATIONCODE");
+              oc.textContent = orgCode;
+              oid.appendChild(oc);
+              id.appendChild(oid);
+  
+              // LOCATIONCODE com o valor digitado
+              var lc  = b.xmlDoc.createElement("LOCATIONCODE");
+              lc.textContent = code.trim();
+              id.appendChild(lc);
+  
+              // Encaixa o LOCATIONID e a função no Body
+              mp.appendChild(id);
+              b.body.appendChild(mp);
+              // Serializa para envio
+              return new XMLSerializer().serializeToString(b.xmlDoc);
+            }
+
+            // ---------- Monta uma sequência de tentativas para MP0312_GetSystemEquipment_001 ----------
+            function buildSystemRequests(code) {
+              var reqs = []; // lista de XMLs de tentativas
+  
+              // Função interna que constrói cada variante (com/sem ORGANIZATIONID)
+              function makeReq(includeOrg, orgValue) {
+                var b  = buildEnvelope();
+                // Função MP0312_001
+                var mp = b.xmlDoc.createElementNS(
+                  "http://schemas.datastream.net/MP_functions/MP0312_001",
+                  "MP0312_GetSystemEquipment_001"
+                );
+                mp.setAttribute("verb", "Get");
+                mp.setAttribute("version", "001");
+  
+                // SYSTEMID (identificador de sistema)
+                var sid = b.xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "SYSTEMID");
+  
+                // Se solicitado, inclui ORGANIZATIONID/ORGANIZATIONCODE
+                if (includeOrg) {
+                  var oid = b.xmlDoc.createElement("ORGANIZATIONID");
+                  var oc  = b.xmlDoc.createElement("ORGANIZATIONCODE");
+                  oc.textContent = orgValue;
+                  oid.appendChild(oc);
+                  sid.appendChild(oid);
+                }
+  
+                // Critério por EQUIPMENTCODE (o mesmo valor digitado)
+                var eq = b.xmlDoc.createElement("EQUIPMENTCODE"); 
+                eq.textContent = code.trim();
+                sid.appendChild(eq);
+  
+                // Encaixa o SYSTEMID e a função no Body
+                mp.appendChild(sid);
+                b.body.appendChild(mp);
+                // Serializa e retorna
+                return new XMLSerializer().serializeToString(b.xmlDoc);
+              }
+  
+              // Duas tentativas: (1) com organização do sistema; (2) sem org
+              reqs.push(makeReq(true,  systemOrg)); // com ORGANIZATIONID/ORGANIZATIONCODE
+              reqs.push(makeReq(false, ""));        // sem ORGANIZATIONID
+  
+              return reqs; // devolve a lista de XMLs para tentativa sequencial
+            }
+
+            // ---------- Função genérica para fazer o POST SOAP e tratar retorno ----------
+            function callSOAP(xmlData, soapAction, parseFn, onCannotFind, onHardError) {
+              return Ext.Ajax.request({
+                // Endpoint do conector SOAP do EAM
+                url: "https://us1.eam.hxgnsmartcloud.com/axis/services/EWSConnector",
+                method: "POST",
+                withCredentials: true, // envia cookies/sessão se houver
+                headers: {
+                  "Content-Type": "text/xml; charset=utf-8",
+                  "SOAPAction": soapAction, // ação SOAP específica da MP
+                  "x-api-key": API_KEY      // chave de API exigida pelo ambiente cloud
+                },
+                xmlData: xmlData, // payload XML da requisição
+                success: function (resp) {
+                  // Texto bruto da resposta
+                  var txt = resp.responseText || "";
+                  try {
+                    // Tenta extrair a descrição usando o parser apropriado (asset/location/system)
+                    var desc = parseFn(txt);
+                    if (desc) { finishWithDesc(desc); return; } // se achou, grava e encerra
+                  } catch (e) {
+                    // Se parsing falhar, continua fluxo para verificar faults ou fallback
+                  }
+  
+                  // Verifica se a resposta contém SOAP Fault
+                  var fault = parseFaultInfo(txt);
+                  if (fault) {
+                    // Se for "não encontrado", chama o próximo fallback
+                    if (/cannot\s+find/i.test(fault) || /não\s+(localizar|encontrar)/i.test(fault)) {
+                      onCannotFind();
+                    } else {
+                      // Fault "duro": mostra para o usuário e aciona callback opcional
+                      Ext.Msg.alert("Erro", fault);
+                      if (onHardError) onHardError(fault);
+                    }
+                  } else {
+                    // Sem descrição e sem Fault explícito: tenta próximo fallback
+                    onCannotFind();
+                  }
+                },
+                failure: function (resp) {
+                  // Em falha HTTP, tenta extrair Fault e decidir se há fallback
+                  var txt = (resp.responseText || "").toString();
+                  var fault = parseFaultInfo(txt);
+                  if (fault) {
+                    if (/cannot\s+find/i.test(fault) || /não\s+(localizar|encontrar)/i.test(fault)) {
+                      onCannotFind();
+                    } else {
+                      Ext.Msg.alert("Erro", fault);
+                      if (onHardError) onHardError(fault);
+                    }
+                  } else {
+                    // Sem informação: tenta próximo fallback
+                    onCannotFind();
+                  }
+                }
+              });
+            }
+  
+            // ---------- Parsers de descrição por tipo de entidade ----------
+            function parseAssetDesc(text) {
+              var xml = (new DOMParser()).parseFromString(text, "text/xml");
+              return parseFirstChildText(xml, "http://schemas.datastream.net/MP_fields", "ASSETID", "DESCRIPTION");
+            }
+            function parseLocationDesc(text) {
+              var xml = (new DOMParser()).parseFromString(text, "text/xml");
+              return parseFirstChildText(xml, "http://schemas.datastream.net/MP_fields", "LOCATIONID", "DESCRIPTION");
+            }
+            function parseSystemDesc(text) {
+              var xml = (new DOMParser()).parseFromString(text, "text/xml");
+              return parseFirstChildText(xml, "http://schemas.datastream.net/MP_fields", "SYSTEMID", "DESCRIPTION");
+            }
+  
+            // ---------- Fallback 2: tentar como Sistema ----------
+            function lookupSystem() {
+              // Prepara as variações de request (com e sem ORGANIZATIONID)
+              var reqs = buildSystemRequests(equipmentCode);
+              var i = 0; // índice da tentativa atual
+  
+              // Função que dispara a próxima tentativa
+              function nextSystem() {
+                // Se esgotou as tentativas, informa falha ao usuário
+                if (i >= reqs.length) {
+                  Ext.Msg.alert('Aviso', 'Falha na consulta do sistema');
+                  return;
+                }
+                // Pega o XML da vez e chama o serviço
+                var xml = reqs[i++];
+                callSOAP(
+                  xml,
+                  "http://schemas.datastream.net/MP_functions/MP0312_001/MP0312_GetSystemEquipment_001",
+                  parseSystemDesc,
+                  nextSystem // se não achar, tenta a próxima variação
+                );
+              }
+              // Inicia a primeira tentativa
+              nextSystem();
+            }
+  
+            // ---------- Fallback 1: tentar como Localização; se falhar, vai para Sistema ----------
+            function lookupLocation() {
+              callSOAP(
+                buildLocationRequest(equipmentCode),
+                "http://schemas.datastream.net/MP_functions/MP0318_001/MP0318_GetLocation_001",
+                parseLocationDesc,
+                lookupSystem // se não achar localização, tenta sistema
+              );
+            }
+  
+            // ---------- Passo 1: tentar como Equipamento; se falhar, tenta Localização ----------
+            callSOAP(
+              buildAssetRequest(equipmentCode),
+              "http://schemas.datastream.net/MP_functions/MP0302_001/MP0302_GetAssetEquipment_001",
+              parseAssetDesc,
+              lookupLocation // se não achar equipamento, vai para localização
+            );
+          }
+        },
+  
+        // =========================
+        // DEPARTAMENTOS
+        // =========================
+        // Dispara quando 'udfchar05' perde o foco (código do departamento)
+        '[extensibleFramework] [tabName=HDR] [name=udfchar05]': {
+          customonblur: function () {
+            // Obtém o form e lê o código do depto
+            var vFormPanel = EAM.Utils.getCurrentTab().getFormPanel();
+            var deptCode = vFormPanel.getFldValue('udfchar05');
+            // Se vazio, não faz nada
+            if (!deptCode || deptCode.trim() === '') return;
+  
+            // Configurações de tenant/organization para a chamada de departamento
+            var tenant = "BVNPM1735306475_TST";
+            var organization = "*";
+  
+            // Monta a requisição SOAP para MP0617_GetDepartment_001
+            function buildSoapRequest(departmentCode) {
+              var xmlDoc = document.implementation.createDocument("", "", null);
+              var envelope = xmlDoc.createElementNS("http://schemas.xmlsoap.org/soap/envelope/", "soapenv:Envelope");
+              envelope.setAttribute("xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
+              envelope.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+  
+              var header = xmlDoc.createElement("soapenv:Header");
+              var tenantElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Tenant");
+              tenantElem.textContent = tenant;
+              header.appendChild(tenantElem);
+              var orgElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Organization");
+              orgElem.textContent = organization;
+              header.appendChild(orgElem);
+              envelope.appendChild(header);
+  
+              var body = xmlDoc.createElement("soapenv:Body");
+              var mpFunction = xmlDoc.createElementNS("http://schemas.datastream.net/MP_functions/MP0617_001", "MP0617_GetDepartment_001");
+              mpFunction.setAttribute("verb", "Get");
+              mpFunction.setAttribute("noun", "Department");
+              mpFunction.setAttribute("version", "001");
+  
+              // DEPARTMENTID com ORGANIZATIONID=* e DEPARTMENTCODE
+              var deptID = xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "DEPARTMENTID");
+              var orgID = xmlDoc.createElement("ORGANIZATIONID");
+              var orgCode = xmlDoc.createElement("ORGANIZATIONCODE");
+              orgCode.textContent = "*";
+              orgID.appendChild(orgCode);
+              deptID.appendChild(orgID);
+  
+              var deptCodeElement = xmlDoc.createElement("DEPARTMENTCODE");
+              deptCodeElement.textContent = departmentCode.trim();
+              deptID.appendChild(deptCodeElement);
+  
+              // Encaixa DEPARTMENTID e função no Body
+              mpFunction.appendChild(deptID);
+              body.appendChild(mpFunction);
+              envelope.appendChild(body);
+              xmlDoc.appendChild(envelope);
+  
+              // Serializa para envio
+              return new XMLSerializer().serializeToString(xmlDoc);
+            }
+  
+            // Processa a resposta do departamento: pode resolver unidade via UDFCHAR01
+            function processResponse(response, fallbackCode) {
+              try {
+                var parser = new DOMParser();
+                var responseXml = parser.parseFromString(response.responseText, "text/xml");
+                var ns = "http://schemas.datastream.net/MP_fields";
+  
+                // Se UDFCHAR01 tiver um código de unidade, faz uma 2ª chamada para obter a descrição da unidade
+                var unidadeElement = responseXml.getElementsByTagNameNS(ns, "UDFCHAR01");
+                if (unidadeElement.length > 0 && unidadeElement[0].textContent.trim() !== '') {
+                  var unidadeCodigo = unidadeElement[0].textContent.trim();
+  
+                  // Monta nova requisição para a "unidade" (também via MP0617)
+                  var soapRequestUnidade = buildSoapRequest(unidadeCodigo);
+                  Ext.Ajax.request({
+                    url: "https://us1.eam.hxgnsmartcloud.com/axis/services/EWSConnector",
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "text/xml; charset=utf-8",
+                      "SOAPAction": "http://schemas.datastream.net/MP_functions/MP0617_001/MP0617_GetDepartment_001",
+                      "x-api-key": "fe57908549-ce74-4d02-a524-bc15488f20fd"
+                    },
+                    xmlData: soapRequestUnidade,
+                    success: function (response) {
+                      try {
+                        // Converte a resposta e tenta pegar DESCRIPTION
+                        var parser = new DOMParser();
+                        var responseXml = parser.parseFromString(response.responseText, "text/xml");
+                        var descricaoElement = responseXml.getElementsByTagNameNS(ns, "DESCRIPTION");
+  
+                        // Se vier descrição, grava em udfchar06; senão, grava o próprio código
+                        if (descricaoElement.length > 0 && descricaoElement[0].textContent.trim() !== '') {
+                          vFormPanel.setFldValue('udfchar06', descricaoElement[0].textContent.trim(), true);
+                        } else {
+                          vFormPanel.setFldValue('udfchar06', unidadeCodigo, true);
+                        }
+                      } catch (e) {
+                        // Erro no parsing: usa o código como fallback
+                        vFormPanel.setFldValue('udfchar06', unidadeCodigo, true);
+                      }
+                    },
+                    failure: function () {
+                      // Falha HTTP: usa o código como fallback
+                      vFormPanel.setFldValue('udfchar06', unidadeCodigo, true);
+                    }
+                  });
+                } else {
+                  // Não tem UDFCHAR01; tenta pegar DESCRIPTION direto do departamento
+                  var descricaoElement = responseXml.getElementsByTagNameNS(ns, "DESCRIPTION");
+                  if (descricaoElement.length > 0 && descricaoElement[0].textContent.trim() !== '') {
+                    vFormPanel.setFldValue('udfchar06', descricaoElement[0].textContent.trim(), true);
+                  } else {
+                    // Nem descrição, grava o código de fallback
+                    vFormPanel.setFldValue('udfchar06', fallbackCode, true);
+                  }
+                }
+              } catch (e) {
+                // Erro geral: grava fallback (código do depto)
+                vFormPanel.setFldValue('udfchar06', fallbackCode, true);
+              }
+            }
+  
+            // Monta o XML da primeira chamada (depto informado)
+            var soapRequest = buildSoapRequest(deptCode);
+  
+            // Dispara a chamada SOAP para departamento
+            Ext.Ajax.request({
+              url: "https://us1.eam.hxgnsmartcloud.com/axis/services/EWSConnector",
+              method: "POST",
+              headers: {
+                "Content-Type": "text/xml; charset=utf-8",
+                "SOAPAction": "http://schemas.datastream.net/MP_functions/MP0617_001/MP0617_GetDepartment_001",
+                "x-api-key": "fe57908549-ce74-4d02-a524-bc15488f20fd"
+              },
+              xmlData: soapRequest,
+              success: function (response) {
+                // Processa a resposta e, se necessário, faz a 2ª busca da unidade
+                processResponse(response, deptCode.trim());
+              },
+              failure: function () {
+                // Falha HTTP: escreve o código no udfchar06
+                vFormPanel.setFldValue('udfchar06', deptCode.trim(), true);
+              }
+            });
+          }
+        },
+  
+        // =========================
+        // UDLV → descrições (udfchar03→udfchar07, udfchar04→udfchar08, udfchar10→udfchar14)
+        // =========================
+        // Para cada um desses campos, ao perder o foco, busca uma descrição traduzida
+        '[extensibleFramework] [tabName=HDR] [name=udfchar03], [name=udfchar04], [name=udfchar10]': {
+          customonblur: function () {
+            var vFormPanel = EAM.Utils.getCurrentTab().getFormPanel();
+  
+            // Cabeçalhos padrão
+            var tenant = "BVNPM1735306475_TST";
+            var organization = "*";
+  
+            // Mapeia: de → para (onde escrever a descrição)
+            var fields = [
+              { from: 'udfchar03', to: 'udfchar07' },
+              { from: 'udfchar04', to: 'udfchar08' },
+              { from: 'udfchar10', to: 'udfchar14' }
+            ];
+  
+            // Para cada par, dispare uma consulta MP0674_001 (descrições)
+            fields.forEach(function (pair) {
+              // Lê o valor do campo origem
+              var value = vFormPanel.getFldValue(pair.from);
+              // Se vazio, ignora
+              if (!value || value.trim() === '') return;
+  
+              // Formata a chave de UDLV (ex.: "udfchar03xyz")
+              var formattedValue = pair.from + value.trim().toLowerCase();
+  
+              // Monta envelope SOAP
+              var xmlDoc = document.implementation.createDocument("", "", null);
+              var envelope = xmlDoc.createElementNS("http://schemas.xmlsoap.org/soap/envelope/", "soapenv:Envelope");
+              envelope.setAttribute("xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
+              envelope.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+  
+              var header = xmlDoc.createElement("soapenv:Header");
+              var tenantElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Tenant");
+              tenantElem.textContent = tenant;
+              header.appendChild(tenantElem);
+              var orgElem = xmlDoc.createElementNS("http://schemas.datastream.net/headers", "Organization");
+              orgElem.textContent = organization;
+              header.appendChild(orgElem);
+              envelope.appendChild(header);
+  
+              // Corpo + função MP0674_001
+              var body = xmlDoc.createElement("soapenv:Body");
+              var mpFunction = xmlDoc.createElementNS("http://schemas.datastream.net/MP_functions/MP0674_001", "MP0674_GetDescription_001");
+              mpFunction.setAttribute("verb", "Get");
+              mpFunction.setAttribute("noun", "Description");
+              mpFunction.setAttribute("version", "001");
+  
+              // DESCRIPTIONID com ENTITY=UDLV, DESCODE=<chave>, ORG=*, LANG=PT, TYPE=COCT
+              var descriptionID = xmlDoc.createElementNS("http://schemas.datastream.net/MP_fields", "DESCRIPTIONID");
+              var entity = xmlDoc.createElement("ENTITY");
+              entity.textContent = "UDLV";
+              descriptionID.appendChild(entity);
+  
+              var descode = xmlDoc.createElement("DESCODE");
+              descode.textContent = formattedValue;
+              descriptionID.appendChild(descode);
+  
+              var orgID = xmlDoc.createElement("ORGANIZATIONID");
+              orgID.setAttribute("entity", "User");
+              var orgCode = xmlDoc.createElement("ORGANIZATIONCODE");
+              orgCode.textContent = "*";
+              orgID.appendChild(orgCode);
+              descriptionID.appendChild(orgID);
+  
+              var langID = xmlDoc.createElement("LANGUAGEID");
+              var langCode = xmlDoc.createElement("LANGUAGECODE");
+              langCode.textContent = "PT";
+              langID.appendChild(langCode);
+              descriptionID.appendChild(langID);
+  
+              var type = xmlDoc.createElement("TYPE");
+              type.setAttribute("entity", "User");
+              var typeCode = xmlDoc.createElement("TYPECODE");
+              typeCode.textContent = "COCT";
+              type.appendChild(typeCode);
+              descriptionID.appendChild(type);
+  
+              // Encaixa o DESCRIPTIONID e a função no Body
+              mpFunction.appendChild(descriptionID);
+              body.appendChild(mpFunction);
+              envelope.appendChild(body);
+              xmlDoc.appendChild(envelope);
+  
+              // Serializa o XML para envio
+              var soapRequest = new XMLSerializer().serializeToString(xmlDoc);
+  
+              // Dispara a requisição SOAP para MP0674_001
+              Ext.Ajax.request({
+                url: "https://us1.eam.hxgnsmartcloud.com/axis/services/EWSConnector",
+                method: "POST",
+                headers: {
+                  "Content-Type": "text/xml; charset=utf-8",
+                  "SOAPAction": "http://schemas.datastream.net/MP_functions/MP0674_001/MP0674_GetDescription_001",
+                  "x-api-key": "fe57908549-ce74-4d02-a524-bc15488f20fd" 
+                },
+                xmlData: soapRequest,
+                success: function (response) {
+                  try {
+                    // Converte a resposta e pega o texto traduzido
+                    var parser = new DOMParser();
+                    var responseXml = parser.parseFromString(response.responseText, "text/xml");
+                    var ns = "http://schemas.datastream.net/MP_fields";
+                    var translatedElements = responseXml.getElementsByTagNameNS(ns, "TRANSLATEDTEXT");
+                    if (translatedElements.length > 0) {
+                      var translatedText = translatedElements[0].textContent;
+                      // Escreve a descrição no campo destino (to)
+                      vFormPanel.setFldValue(pair.to, translatedText, true);
+                      // (havia um console.log aqui no seu código original)
+                    } else {
+                      // Sem tradução, não altera (ou poderia gravar fallback, se desejado)
+                    }
+                  } catch (e) {
+                    // Silencia erros de parsing — comportamento original
+                  }
+                },
+                failure: function () {
+                  // Silencia falhas HTTP — comportamento original
+                }
+              });
+            });
+          }
+        }
+  
+      }; // fim do objeto de seletores
+    } // fim de getSelectors
+  }); // fim do Ext.define
+
+
+/*  
+1. Estrutura da Classe
+•	Ext.define("EAM.custom.external_cssrpt", {...})
+Define uma classe no ExtJS que será usada como extensão no HxGN EAM.
+•	extend: "EAM.custom.AbstractExtensibleFramework"
+A classe herda da base do framework extensível do EAM, permitindo interceptar eventos e manipular campos da tela.
+•	O método getSelectors() retorna um objeto com mapeamentos de seletores (elementos da UI) e as funções que serão disparadas em eventos (como onblur).
+________________________________________
+2. Tratamento do Campo Equipment
+Disparo
+Sempre que o usuário sair do campo equipment na aba HDR, dispara a função.
+Passos:
+1.	Obtém contexto
+o	Recupera o formulário ativo.
+o	Lê o valor do campo equipment.
+2.	Validação
+o	Se vazio, não faz nada.
+3.	Configurações fixas
+o	Tenant, organização, orgCode (CNPEM), chave de API.
+o	Esses dados são usados em todas as chamadas SOAP.
+4.	Funções auxiliares
+o	buildEnvelope(): monta a estrutura padrão SOAP (Envelope, Header e Body).
+o	parseFaultInfo(): lê a resposta SOAP e tenta extrair <faultstring> caso haja erro.
+o	finishWithDesc(desc): grava a descrição encontrada no campo udfchar12.
+o	parseFirstChildText(...): função genérica para extrair filhos específicos do XML.
+5.	Funções de requisição
+o	buildAssetRequest(code): monta XML para chamar MP0302_GetAssetEquipment_001.
+o	buildLocationRequest(code): monta XML para chamar MP0318_GetLocation_001.
+o	buildSystemRequests(code): cria uma lista de XMLs para MP0312_GetSystemEquipment_001, tentando variações (com e sem ORGANIZATION).
+6.	Função de envio
+o	callSOAP(xml, action, parser, onNotFound, onError):
+	Faz o POST para EWSConnector.
+	Se sucesso → tenta extrair a descrição.
+	Se não encontrou → chama onNotFound() para fallback.
+	Se erro grave → mostra mensagem de erro.
+7.	Parsers específicos
+o	parseAssetDesc(): extrai DESCRIPTION de ASSETID.
+o	parseLocationDesc(): extrai de LOCATIONID.
+o	parseSystemDesc(): extrai de SYSTEMID.
+8.	Fallbacks encadeados
+o	Primeiro tenta como Asset.
+o	Se não achou, tenta como Location.
+o	Se também não achou, tenta como System (com várias variações de XML).
+________________________________________
+3. Tratamento do Campo Departamento (udfchar05)
+Disparo
+Sempre que o usuário sair do campo udfchar05.
+Passos:
+1.	Obtém contexto
+o	Recupera o formulário ativo e lê o código do departamento.
+2.	Validação
+o	Se vazio, não faz nada.
+3.	Função de request
+o	buildSoapRequest(deptCode): monta SOAP para MP0617_GetDepartment_001.
+o	O XML contém DEPARTMENTID, ORGANIZATIONID e DEPARTMENTCODE.
+4.	Função de processamento
+o	processResponse(response, fallbackCode):
+	Se a resposta contém UDFCHAR01 → significa que o depto tem uma unidade vinculada.
+	Faz nova chamada para buscar a descrição da unidade.
+	Grava a descrição (ou o código, se não houver descrição) em udfchar06.
+	Se não há unidade → usa a descrição do próprio departamento.
+	Se não há nada → grava o código original.
+5.	Execução
+o	Primeiro dispara a consulta SOAP do departamento.
+o	Depois, processResponse decide se faz a chamada extra para unidade.
+________________________________________
+4. Tratamento de Campos UDLV (udfchar03, udfchar04, udfchar10)
+Disparo
+Sempre que o usuário sair de um desses campos.
+Passos:
+1.	Definições
+o	Mapeia os campos origem e destino:
+	udfchar03 → udfchar07
+	udfchar04 → udfchar08
+	udfchar10 → udfchar14
+2.	Laço de execução
+o	Para cada campo origem → lê valor.
+o	Se vazio → ignora.
+o	Caso contrário, monta formattedValue (campo + valor em minúsculo).
+3.	Monta request SOAP
+o	Função chamada é MP0674_GetDescription_001.
+o	O DESCRIPTIONID contém:
+	ENTITY = UDLV
+	DESCODE = valor formatado
+	ORGANIZATION = *
+	LANGUAGE = PT
+	TYPE = COCT
+4.	Chamada SOAP
+o	Faz POST para o EWSConnector.
+o	Se sucesso → extrai TRANSLATEDTEXT.
+o	Preenche no campo destino (pair.to).
+o	Se não houver tradução, deixa em branco.
+________________________________________
+5. Encadeamento de Funcionalidade
+Resumindo o fluxo principal:
+•	Ao sair de equipment, o sistema tenta identificar se o código é Asset, Location ou System, nessa ordem. Se encontrar, grava a descrição em udfchar12.
+•	Ao sair de udfchar05 (departamento), busca a descrição ou unidade vinculada e grava em udfchar06.
+•	Ao sair de udfchar03/04/10, consulta a tabela de descrições (R5DESCRIPTIONS) e preenche campos de apoio (udfchar07/08/14).
+
+
+
+*/
