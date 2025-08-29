@@ -28,7 +28,7 @@ Ext.define("EAM.custom.external_cssrpt", {
             var systemOrg    = orgCode;               // Organização usada para System
             var API_KEY      = "fe57908549-ce74-4d02-a524-bc15488f20fd"; // Chave API
 
-            // ---------- Função utilitária para montar o envelope SOAP ----------
+            //1. ---------- Função utilitária para montar o envelope SOAP ---------- 
             function buildEnvelope() {
               // Cria um documento XML vazio
               var xmlDoc = document.implementation.createDocument("", "", null);
