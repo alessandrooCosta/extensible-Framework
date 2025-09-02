@@ -57,4 +57,65 @@ Ext.define("EAM.custom.external_wuoseq", {
   }});
   
 
- 
+ /*
+POSSIVEL CODIGO PARA TRAZER CELULA COLORIDA
+
+function colorListAndCells() {
+    for(var i = 0; i < gridStore.getCount(); i++) {
+        try {
+            var record = gridStore.getAt(i);
+            var status = record.get('evt_status');  
+            var node = gridView.getNode(i);
+            
+            if(node) {
+                // 1. COR DA LINHA (original)
+                if(status === 'R'){
+                    node.style.backgroundColor = '#CCFFCC';
+                }else if(status === 'C'){
+                    node.style.backgroundColor = '#FFCCCC';
+                }else if(status === 'IP'){
+                    node.style.backgroundColor = '#CCE5FF';
+                }else if(status === 'Q'){
+                    node.style.backgroundColor = '#FFFFCC';
+                }
+                
+                // 2. COR DA CÉLULA ESPECÍFICA
+                var cells = node.querySelectorAll('td');
+                var columnIndex = 2; // Exemplo: terceira coluna
+                
+                if (cells[columnIndex]) {
+                    // Cores mais fortes/escuras para a célula
+                    switch(status) {
+                        case 'R': cells[columnIndex].style.backgroundColor = '#99FF99'; break;
+                        case 'C': cells[columnIndex].style.backgroundColor = '#FF9999'; break;
+                        case 'IP': cells[columnIndex].style.backgroundColor = '#99CCFF'; break;
+                        case 'Q': cells[columnIndex].style.backgroundColor = '#FFFF99'; break;
+                    }
+                    cells[columnIndex].style.fontWeight = 'bold';
+                }
+            }
+        } catch(e) {
+            console.log('Erro ao processar linha ' + i + ': ' + e);
+        }
+    }
+}
+
+
+Resultado Visual:
+Cada linha terá:
+
+Cor de fundo da linha (mais clara)
+
+Cor de fundo da célula específica (mais forte/escura)
+
+Texto em negrito na célula específica
+
+Exemplo para status 'R' (Resolved):
+
+Linha: #CCFFCC (verde bem claro)
+
+Célula: #99FF99 (verde mais escuro) + negrito
+
+
+*/
+
