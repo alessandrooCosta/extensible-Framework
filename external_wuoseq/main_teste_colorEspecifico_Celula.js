@@ -15,9 +15,7 @@ Ext.define("EAM.custom.external_wuoseq", {
                 try {
                     var record = gridStore.getAt(i);
                     var status = record.get('evt_status'); 
-                    var mrc = record.get('evt_mrc'); 
-                    var equipament = record.get('evt_object');
-                    var worker = record.get('evt_code');
+                    var type = record.get('evt_type'); 
                     var node = gridView.getNode(i);
                     
                     if(node) {
@@ -35,34 +33,15 @@ Ext.define("EAM.custom.external_wuoseq", {
                         // 2. COR DA CÉLULA ESPECÍFICA
                         var cells = node.querySelectorAll('td');
 
-                        var columnIndex = 3;                         
+                        var columnIndex = 1;                         
                         if (cells[columnIndex]) {
-                            switch(mrc) {
-                                case 'MANU': cells[columnIndex].style.backgroundColor = '#99FF99'; break;
-                                case '*': cells[columnIndex].style.backgroundColor = '#FF9999'; break;
-                                case '03-ELE-ASSET': cells[columnIndex].style.backgroundColor = '#99CCFF'; break;
+                            switch(type) {
+                                case 'JOB': cells[columnIndex].style.backgroundColor = '#99FF99'; break;
+                                case 'PPM': cells[columnIndex].style.backgroundColor = '#FF9999'; break;
                             }
                             cells[columnIndex].style.fontWeight = 'bold';
+                            cells[columnIndex].style.fontWeight = 'inset 0 0 0 2px #0000FF';
                         }
-                        var columnIndex2 = 2; 
-                        if(cells[columnIndex2]){
-                          switch(equipament) {
-                            case 'AA-001': cells[columnIndex2].style.backgroundColor = '#99FF99'; break;
-                            case 'FT-038': cells[columnIndex2].style.backgroundColor = '#FF9999'; break;
-                            case 'FT-041': cells[columnIndex2].style.backgroundColor = '#99CCFF'; break;
-                        }
-                        cells[columnIndex2].style.fontWeight = 'bold';
-                        }
-                        var columnIndex4 = 1; 
-                        if(cells[columnIndex4]){
-                          switch(worker) {
-                            case '10001': cells[columnIndex4].style.backgroundColor = '#99FF99'; break;
-                            case '10002': cells[columnIndex4].style.backgroundColor = '#FF9999'; break;
-                            case '10004': cells[columnIndex4].style.backgroundColor = '#99CCFF'; break;
-                        }
-                        cells[columnIndex4].style.fontWeight = 'bold';
-                        }
-                        
                     }
                 } catch(e) {
                     console.log('Erro ao processar linha ' + i + ': ' + e);
