@@ -43,6 +43,16 @@ Ext.define("EAM.custom.external_wswoup", {
       }
     }
 
+    function findUdfColumn(grid){
+      if (!grid) return null;
+      return (
+        (grid.down && grid.down('gridcolumn[dataIndex=udfchar50]')) ||
+        (grid.normalGrid && grid.normalGrid.down && grid.normalGrid.down('gridcolumn[dataIndex=udfchar50]')) ||
+        (grid.lockedGrid && grid.lockedGrid.down && grid.lockedGrid.down('gridcolumn[dataIndex=udfchar50]')) ||
+        null
+      );
+    }
+
     function applyLimitToColumn(col){
       col.renderer = function (v) {
         if (v == null) return '';
@@ -70,11 +80,7 @@ Ext.define("EAM.custom.external_wswoup", {
       ensureCellEditing(grid);
 
       // acha a coluna (normal/locked)
-      var col =
-        (grid.down && grid.down('gridcolumn[dataIndex=udfchar50]')) ||
-        (grid.normalGrid && grid.normalGrid.down && grid.normalGrid.down('gridcolumn[dataIndex=udfchar50]')) ||
-        (grid.lockedGrid && grid.lockedGrid.down && grid.lockedGrid.down('gridcolumn[dataIndex=udfchar50]')) ||
-        null;
+      var col = findUdfColumn(grid);
 
       if (!col) {
         // cria coluna mínima (sem mexer em width/ordem)
@@ -89,10 +95,7 @@ Ext.define("EAM.custom.external_wswoup", {
             hdr.add(cfg);
             if (grid.getView && grid.getView().refresh) grid.getView().refresh();
             log(label + ': column inserted');
-    
-            col = grid.down('gridcolumn[dataIndex=udfchar50]') ||
-                  (grid.normalGrid && grid.normalGrid.down && grid.normalGrid.down('gridcolumn[dataIndex=udfchar50]')) ||
-                  (grid.lockedGrid && grid.lockedGrid.down && grid.lockedGrid.down('gridcolumn[dataIndex=udfchar50]')) || null;
+            col = findUdfColumn(grid);
           }
         } catch(e){ log(label + ': insert failed', e); }
       }
@@ -117,6 +120,8 @@ Ext.define("EAM.custom.external_wswoup", {
 
     function wire(grid){
       if (!grid) return;
+      if (grid._udf50Wired) return;
+      grid._udf50Wired = true;
       grid.on('afterrender', function(){ addOrEnableUdfEditor(grid, 'afterrender'); });
       grid.on('reconfigure', function(){ addOrEnableUdfEditor(grid, 'reconfigure'); });
       var store = grid.getStore && grid.getStore();
@@ -151,6 +156,30 @@ Ext.define("EAM.custom.external_wswoup", {
       'button[action=execute]': {
         click: function(){ setTimeout(runOnce, 500); }
       }
-    };
+      };
+
+
+      /*
+      return {
+      '[extensibleFramework] [tabName=HDR] [name=reportedby]': {
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      }
+      }
+*/
   }
 });
