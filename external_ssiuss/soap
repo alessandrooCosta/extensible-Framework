@@ -1,0 +1,25 @@
+  <?xml version="1.0" encoding="utf-8" ?> 
+- <Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+- <Header>
+- <Security xmlns="http://schemas.xmlsoap.org/ws/2002/04/secext">
+- <UsernameToken>
+  <Username>AATAIDE@IBNQI1720580460_DEM</Username> 
+  <Password>Asset@2025</Password> 
+  </UsernameToken>
+  </Security>
+  <SessionScenario xmlns="http://schemas.datastream.net/headers">terminate</SessionScenario> 
+  <Organization xmlns="http://schemas.datastream.net/headers">*</Organization> 
+  </Header>
+- <Body>
+- <MP0241_GetPart_001 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" verb="Get" noun="Part" version="001" xmlns="http://schemas.datastream.net/MP_functions/MP0241_001">
+- <PARTID xmlns="http://schemas.datastream.net/MP_fields">
+  <PARTCODE>10825</PARTCODE> 
+- <ORGANIZATIONID entity="User">
+  <ORGANIZATIONCODE>TROMB-03</ORGANIZATIONCODE> 
+  <DESCRIPTION></DESCRIPTION> 
+  </ORGANIZATIONID>
+  <DESCRIPTION></DESCRIPTION> 
+  </PARTID>
+  </MP0241_GetPart_001>
+  </Body>
+  </Envelope>
