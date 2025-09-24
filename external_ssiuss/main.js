@@ -102,7 +102,7 @@ Ext.define("EAM.custom.external_ssiuss", {
         if (!fp || !fp.setFldValue) return;
 
         if (fp.getForm && fp.getForm().getFieldsAndButtons && EAM.Builder && EAM.Builder.setFieldState){
-          EAM.Builder.setFieldState({ udfnum02: "protected", UDFNUM02: "protected" }, fp.getForm().getFieldsAndButtons());
+          EAM.Builder.setFieldState({ udfnum02: "optional", UDFNUM02: "optional" }, fp.getForm().getFieldsAndButtons());
         }
 
         if (fp.getFld && fp.getFld('udfnum02')) fp.setFldValue('udfnum02', val, true);
@@ -120,9 +120,9 @@ Ext.define("EAM.custom.external_ssiuss", {
       if (status === 'aprovado') {
         EAM.Builder.setFieldState({ udfnum02: "protected", UDFNUM02: "protected" }, fields);
       } else if (status === 'incompleto') {
-        EAM.Builder.setFieldState({ udfnum02: "protected", UDFNUM02: "protected" }, fields);
+        EAM.Builder.setFieldState({ udfnum02: "optional", UDFNUM02: "optional" }, fields);
       } else {
-        EAM.Builder.setFieldState({ udfnum02: "protected", UDFNUM02: "protected" }, fields);
+        EAM.Builder.setFieldState({ udfnum02: "optional", UDFNUM02: "optional" }, fields);
       }
     }
 
