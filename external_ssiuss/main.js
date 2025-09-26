@@ -1,3 +1,5 @@
+
+
 Ext.define("EAM.custom.external_ssiuss", {
   extend: "EAM.custom.AbstractExtensibleFramework",
 
@@ -129,25 +131,10 @@ Ext.define("EAM.custom.external_ssiuss", {
     function applyPriceToDest(grid, rec){
       try{
         if (!grid || !rec) return;
-        var raw = readPriceRaw(rec);
-        if (raw == null) return;
-        reflectFormUdf(raw);
-        if (getStatusLower() === 'aprovado') return;
-        var currentLower = rec.get('udfnum02');
-        var currentUpper = rec.get('UDFNUM02');
-        var hasLower = currentLower !== undefined;
-        var hasUpper = currentUpper !== undefined;
-        if (!hasLower && !hasUpper) {
-          var store = grid.getStore && grid.getStore();
-          var model = store && store.getModel && store.getModel();
-          if (model && model.getField && !model.getField('udfnum02') && model.addFields) {
-            model.addFields([{ name: 'udfnum02', type: 'string', persist: true }]);
-          }
-          hasLower = true;
+        var valorExistente = rec.get('udfnum02') || rec.get('UDFNUM02');
+        if (valorExistente !== undefined) {
+          reflectFormUdf(valorExistente);
         }
-        if (hasLower && rec.get('udfnum02') !== raw) rec.set('udfnum02', raw);
-        if (hasUpper && rec.get('UDFNUM02') !== raw) rec.set('UDFNUM02', raw);
-
       }catch(e){}
     }
 
@@ -177,7 +164,7 @@ Ext.define("EAM.custom.external_ssiuss", {
         if (initialSel && initialSel[0]) {
           Ext.defer(function(){ applyPriceToDest(grid, initialSel[0]); }, 1000);
         }
-      }catch(e){}
+      }catch(e){} 
     }
 
     function hidePriceField(fp) {
@@ -207,9 +194,9 @@ Ext.define("EAM.custom.external_ssiuss", {
 
     function hookPartCopyPrice(fp){
       var fldPart = fp.getFld("part");
-      var fldPreco = fp.getFld("price");
       var fldSug = fp.getFld("udfnum02");
-      if (!fldPart || !fldPreco || !fldSug) return;
+      var fldPreco = fp.getFld("price");
+      if (!fldPart || !fldSug || !fldPreco) return;
       if (fldPart._PRICE_hooked) return;
       fldPart._PRICE_hooked = true;
       var originalSetValue = fldPart.setValue;
@@ -217,12 +204,15 @@ Ext.define("EAM.custom.external_ssiuss", {
         originalSetValue.apply(this, arguments);
         var checkAttempts = 0;
         var checkAndCopy = function(){
-            var precoAtual = fldPreco.getValue();
             checkAttempts++;
-            if (precoAtual) {
-                fldSug.setValue(precoAtual);
-            } else if (checkAttempts < 10) { 
-                Ext.defer(checkAndCopy, 100);
+            var valorSugerido = fldSug.getValue();
+            if (valorSugerido === undefined || valorSugerido === null || valorSugerido === '') {
+                var precoAtual = fldPreco.getValue();
+                if (precoAtual !== undefined && precoAtual !== null) {
+                    fldSug.setValue(precoAtual);
+                } else if (checkAttempts < 10) {
+                    Ext.defer(checkAndCopy, 100);
+                }
             }
         };
         Ext.defer(checkAndCopy, 100);
