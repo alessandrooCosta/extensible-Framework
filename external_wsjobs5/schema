@@ -1,0 +1,56 @@
+  <?xml version="1.0" encoding="utf-8" ?> 
+- <Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+- <Header>
+- <Security xmlns="http://schemas.xmlsoap.org/ws/2002/04/secext">
+- <UsernameToken>
+  <Username>ACOSTA</Username> 
+  <Password>Asset@25</Password> 
+  </UsernameToken>
+  </Security>
+  <SessionScenario xmlns="http://schemas.datastream.net/headers">terminate</SessionScenario> 
+  <Organization xmlns="http://schemas.datastream.net/headers">C001</Organization> 
+  </Header>
+- <Body>
+- <ServiceCode xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" recordid="1" servicecode_pk="servicecode_pk1" xmlns="http://schemas.datastream.net/MP_entities/ServiceCode_001">
+- <SERVICECODEID xmlns="http://schemas.datastream.net/MP_fields">
+  <SERVICECODE>12382</SERVICECODE> 
+- <ORGANIZATIONID entity="User">
+  <ORGANIZATIONCODE>C001</ORGANIZATIONCODE> 
+  <DESCRIPTION>C001</DESCRIPTION> 
+  </ORGANIZATIONID>
+  <LEVEL1>LEVEL11</LEVEL1> 
+  <DESCRIPTION>DESCRIPTION1</DESCRIPTION> 
+  </SERVICECODEID>
+- <SYSTEMID xmlns="http://schemas.datastream.net/MP_fields">
+  <EQUIPMENTCODE>AR-001</EQUIPMENTCODE> 
+- <ORGANIZATIONID entity="Organization">
+  <ORGANIZATIONCODE>ORGANIZATIONCO2</ORGANIZATIONCODE> 
+  <DESCRIPTION>Anel de Resfriamento</DESCRIPTION> 
+  </ORGANIZATIONID>
+  <DESCRIPTION>Anel de Resfriamento</DESCRIPTION> 
+  </SYSTEMID>
+- <STANDARDWO xmlns="http://schemas.datastream.net/MP_fields">
+  <STDWOCODE>STDWOCODE1</STDWOCODE> 
+- <ORGANIZATIONID entity="Group">
+  <ORGANIZATIONCODE>ORGANIZATIONCO3</ORGANIZATIONCODE> 
+  <DESCRIPTION>DESCRIPTION3</DESCRIPTION> 
+  </ORGANIZATIONID>
+  <DESCRIPTION>DESCRIPTION1</DESCRIPTION> 
+  </STANDARDWO>
+  <RESPONSETIME xmlns="http://schemas.datastream.net/MP_fields">1</RESPONSETIME> 
+- <COSTESTIMATE qualifier="ACTUAL" type="T" index="index1" xmlns="http://schemas.datastream.net/MP_fields">
+  <VALUE xmlns="http://www.openapplications.org/oagis_fields">1</VALUE> 
+  <NUMOFDEC xmlns="http://www.openapplications.org/oagis_fields">1</NUMOFDEC> 
+  <SIGN xmlns="http://www.openapplications.org/oagis_fields">SIGN1</SIGN> 
+  <CURRENCY xmlns="http://www.openapplications.org/oagis_fields">CURRENCY1</CURRENCY> 
+  <DRCR xmlns="http://www.openapplications.org/oagis_fields">DRCR1</DRCR> 
+  </COSTESTIMATE>
+- <PRIORITY xmlns="http://schemas.datastream.net/MP_fields">
+  <PRIORITYCODE>PRIORIT1</PRIORITYCODE> 
+  <DESCRIPTION>DESCRIPTION1</DESCRIPTION> 
+  </PRIORITY>
+  <CUSTOMERSELECTABLE xmlns="http://schemas.datastream.net/MP_fields">CUST1</CUSTOMERSELECTABLE> 
+  <BILLABLE xmlns="http://schemas.datastream.net/MP_fields">BILL1</BILLABLE> 
+  </ServiceCode>
+  </Body>
+  </Envelope>
