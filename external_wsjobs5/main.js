@@ -22,7 +22,8 @@ Ext.define('EAM.custom.external_wsjobs', {
                     "description": "optional",
                     "udfnote01": "optional",
                     "servicecategory": "required",
-                    "serviceproblemcode": "required"
+                    "serviceproblemcode": "required",
+                    "priority": "required"
                 };
             } else {
                 vFieldsObj = {
