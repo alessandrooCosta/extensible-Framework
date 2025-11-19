@@ -1,4 +1,4 @@
-Ext.define("EAM.custom.external_cssrpt", {
+Ext.define("EAM.custom.external_osobja", {
     extend: "EAM.custom.AbstractExtensibleFramework",
   
     getSelectors: function () {
