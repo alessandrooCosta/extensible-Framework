@@ -4,14 +4,14 @@ Ext.define("EAM.custom.external_osobja", {
     getSelectors: function () {
 
         const EWS_URL = "https://us1.eam.hxgnsmartcloud.com/axis/services/EWSConnector";
-        const API_KEY = "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36";
-        const TENANT = "IBNQI1720580460_DEM";
-        const ORGANIZATION = "IBNQ";
-        const ORG_CODE = "C001";
+        const API_KEY = "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36"; // API KEY
+        const TENANT = "IBNQI1720580460_DEM"; // TENANT
+        const ORGANIZATION = "IBNQ"; // ORGANIZATION
+        const ORG_CODE = "C001"; // ORG CODE
         const EAM_FIELDS_NS = "http://schemas.datastream.net/MP_fields";
         const EAM_HEADERS_NS = "http://schemas.datastream.net/headers";
 
-        // ----------------- HELPERS DE FORM -----------------
+        // ----------------- HELPERS DE FORM / CAMPOS -----------------
         function getFormPanel() {
             return EAM.Utils.getCurrentTab().getFormPanel();
         }
@@ -19,60 +19,75 @@ Ext.define("EAM.custom.external_osobja", {
         function getFields(fp) {
             return fp && fp.getForm && fp.getForm().getFieldsAndButtons();
         }
-
-        function updateUdf03State(fp) {
+        
+        // ----------------- REGRA: ESTADO DO CHECKBOX -----------------
+        function setUdf03CheckboxState(enableCheckbox, fp) {
             fp = fp || getFormPanel();
-            if (!fp) return;
-
             var fields = getFields(fp);
             if (!fields) return;
 
-            var code = (fp.getFldValue("udfchar50") || "").trim();
+            var newState = enableCheckbox ? "optional" : "protected";
+            var action = { 
+                udfchkbox03: newState 
+            };
+            
+            EAM.Builder.setFieldState(action, fields);
+            console.log("[UDF03] Checkbox 03 definido como: " + newState);
 
-            var checked = false;
-            try {
-                var chkCmp = fp.getFld && fp.getFld("udfchkbox03");
-                if (chkCmp && typeof chkCmp.getValue === "function") {
-                    checked = !!chkCmp.getValue();
-                } else {
-                    var raw = fp.getFldValue("udfchkbox03");
-                    if (raw === true) checked = true;
-                    else if (raw) {
-                        raw = String(raw).trim().toUpperCase();
-                        checked = (raw === "Y" || raw === "S" || raw === "TRUE" || raw === "1" || raw === "+" || raw === "ON" || raw === "T");
-                    }
-                }
-            } catch (e) {
-                console.warn("[UDF03] Erro ao ler checkbox:", e);
-            }
-
-            console.log("[UDF03] updateUdf03State -> code:", code, "checked:", checked);
-
-            if (code === "02" || code === "03") {
-                // checkbox habilitado SEM mexer no valor
-                EAM.Builder.setFieldState({ udfchkbox03: "optional" }, fields);
-
-                // data segue o checkbox
-                if (checked) {
-                    EAM.Builder.setFieldState({ udfdate03: "optional" }, fields);
-                } else {
-                    EAM.Builder.setFieldState({ udfdate03: "protected" }, fields);
-                    fp.setFldValue("udfdate03", "", false);
-                }
-            } else {
-                // qualquer outro código → bloqueia tudo e limpa valores
-                EAM.Builder.setFieldState({
-                    udfchkbox03: "protected",
-                    udfdate03: "protected"
-                }, fields);
-
+            if (!enableCheckbox) {
                 fp.setFldValue("udfchkbox03", false, false);
+                setUdf03DateState(false, fp);
+            }
+        }
+        
+        // ----------------- REGRA: ESTADO DA DATA -----------------
+        function setUdf03DateState(enableDate, fp) {
+            fp = fp || getFormPanel();
+            var fields = getFields(fp);
+            if (!fields) return;
+
+            var newState = enableDate ? "optional" : "protected";
+            var action = { 
+                udfdate03: newState 
+            };
+
+            EAM.Builder.setFieldState(action, fields);
+            console.log("[UDF03] Data 03 definida como: " + newState);
+            
+            if (!enableDate) {
                 fp.setFldValue("udfdate03", "", false);
             }
         }
 
+        // ----------------- REGRA CENTRAL: APLICAR A PARTIR DOS VALORES -----------------
+        // Usada no afterrender, hook e blur
+        function applyUdf03RulesFromValues(fp) {
+            fp = fp || getFormPanel();
+            if (!fp) return;
+
+            var code = (fp.getFldValue("udfchar50") || "").trim();
+            var enableCheckbox = (code === "02" || code === "03");
+
+            // Habilita/protege checkbox conforme o código
+            setUdf03CheckboxState(enableCheckbox, fp);
+
+            // Se o código permite, a data depende do valor atual do checkbox
+            if (enableCheckbox) {
+                var isChecked = !!fp.getFldValue("udfchkbox03");
+                setUdf03DateState(isChecked, fp);
+            }
+        }
+
+        function checkUDF51Value(value) {
+            if (String(value).trim() === "02") {
+                // placeholder se quiser lógica adicional
+            }
+        }
+
+        // ----------------- CACHE PARA DESCRIÇÕES DO UDF50 -----------------
         var descCache = {};
 
+        // ----------------- LOVPOP: BUSCA DESCRIÇÃO DO UDF50 -----------------
         function fetchUDF50DescriptionFromLOV(code) {
             if (!code) return "";
             code = String(code).trim();
@@ -89,12 +104,12 @@ Ext.define("EAM.custom.external_osobja", {
                     method: "POST",
                     params: {
                         popup: true,
-                        GRID_NAME: "LVUDFCD",
+                        GRID_NAME: "LVUDFCD",                // Nome da grid do LOV (do JSON)
                         GRID_TYPE: "LOV",
-                        REQUEST_TYPE: "LOV.HEAD_DATA.STORED",
+                        REQUEST_TYPE: "LOV.HEAD_DATA.STORED", 
                         LOV_TAGNAME: "udfchar50",
                         usagetype: "lov",
-                        USER_FUNCTION_NAME: "OSOBJA",
+                        USER_FUNCTION_NAME: "OSOBJA",       // Nome da função/tela
                         CURRENT_TAB_NAME: "HDR",
 
                         LOV_ALIAS_NAME_1: "param.rentity",
@@ -141,6 +156,7 @@ Ext.define("EAM.custom.external_osobja", {
             return "";
         }
 
+        // ----------------- HOOK NO setValue() DO UDFCHAR50 -----------------
         function hookUDF50Lookup(vFormPanel) {
             var fldCode = vFormPanel.getFld("udfchar50");
             var fldDesc = vFormPanel.getFld("udfchar51");
@@ -159,8 +175,9 @@ Ext.define("EAM.custom.external_osobja", {
                     var trimmedCode = (code || "").trim();
 
                     if (!trimmedCode) {
+                        // limpa desc e protege checkbox/data
                         vFormPanel.setFldValue("udfchar51", "", false);
-                        updateUdf03State(vFormPanel);
+                        applyUdf03RulesFromValues(vFormPanel);
                         return;
                     }
 
@@ -170,26 +187,32 @@ Ext.define("EAM.custom.external_osobja", {
                     }
 
                     vFormPanel.setFldValue("udfchar51", desc, false);
-        
-                    updateUdf03State(vFormPanel);
+                    checkUDF51Value(desc);
+
+                    // Aplica regra central após tudo preenchido
+                    applyUdf03RulesFromValues(vFormPanel);
                 }, 80);
             };
         }
 
+        // ----------------- SELECTORS -----------------
         return {
+            // Ativa hook do UDF50 e reaplica regras ao abrir/reabrir a tela
             "[extensibleFramework] [tabName=HDR]": {
                 afterrender: function () {
                     var vFormPanel = getFormPanel();
                     if (vFormPanel) {
                         hookUDF50Lookup(vFormPanel);
 
+                        // Dá um tempinho pro EAM carregar os valores e reaplica regras
                         Ext.defer(function () {
-                            updateUdf03State(vFormPanel);
+                            applyUdf03RulesFromValues(vFormPanel);
                         }, 200);
                     }
                 }
             },
 
+            // UDFCHAR50 → UDFCHAR51 + regra do checkbox/data (fallback no blur)
             "[extensibleFramework] [tabName=HDR] [name=udfchar50]": {
                 customonblur: function () {
                     var vFormPanel = getFormPanel();
@@ -200,7 +223,7 @@ Ext.define("EAM.custom.external_osobja", {
 
                     if (!trimmedCode) {
                         vFormPanel.setFldValue("udfchar51", "", true);
-                        updateUdf03State(vFormPanel);
+                        applyUdf03RulesFromValues(vFormPanel);
                         return;
                     }
 
@@ -210,14 +233,17 @@ Ext.define("EAM.custom.external_osobja", {
                     }
 
                     vFormPanel.setFldValue("udfchar51", desc, true);
+                    checkUDF51Value(desc);
 
-                    updateUdf03State(vFormPanel);
+                    // Reaplica regra central com base nos valores atuais
+                    applyUdf03RulesFromValues(vFormPanel);
                 }
             },
 
+            // Checkbox → libera/bloqueia a data (udfdate03)
             "[extensibleFramework] [tabName=HDR] checkbox[name=udfchkbox03]": {
-                change: function () {
-                    updateUdf03State(getFormPanel());
+                change: function (field, newValue) {
+                    setUdf03DateState(newValue, getFormPanel());
                 }
             }
         };
