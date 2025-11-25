@@ -3,15 +3,6 @@ Ext.define("EAM.custom.external_osobja", {
 
     getSelectors: function () {
 
-        const EWS_URL = "https://us1.eam.hxgnsmartcloud.com/axis/services/EWSConnector";
-        const API_KEY = "aeb580ed2d-2aa7-45f7-97e2-97cce77f3b36";
-        const TENANT = "IBNQI1720580460_DEM";
-        const ORGANIZATION = "IBNQ";
-        const ORG_CODE = "C001";
-        const EAM_FIELDS_NS = "http://schemas.datastream.net/MP_fields";
-        const EAM_HEADERS_NS = "http://schemas.datastream.net/headers";
-
-        // ----------------- HELPERS DE FORM -----------------
         function getFormPanel() {
             return EAM.Utils.getCurrentTab().getFormPanel();
         }
@@ -48,11 +39,10 @@ Ext.define("EAM.custom.external_osobja", {
 
             console.log("[UDF03] updateUdf03State -> code:", code, "checked:", checked);
 
-            if (code === "02" || code === "03") {
-                // checkbox habilitado SEM mexer no valor
+            if (code === "02" || code === "03") {  // VALORES A SEREM MODIFICADOS 
+
                 EAM.Builder.setFieldState({ udfchkbox03: "optional" }, fields);
 
-                // data segue o checkbox
                 if (checked) {
                     EAM.Builder.setFieldState({ udfdate03: "optional" }, fields);
                 } else {
@@ -60,7 +50,6 @@ Ext.define("EAM.custom.external_osobja", {
                     fp.setFldValue("udfdate03", "", false);
                 }
             } else {
-                // qualquer outro código → bloqueia tudo e limpa valores
                 EAM.Builder.setFieldState({
                     udfchkbox03: "protected",
                     udfdate03: "protected"
@@ -116,9 +105,6 @@ Ext.define("EAM.custom.external_osobja", {
                         filterfields: "userdefinedfieldvalue",
                         filteroperator: "=",
                         filtervalue: code,
-
-                        eamid: "4ad22f92-d098-4413-9473-f284878ff1d1",
-                        tenant: "ASSET_EAM01"
                     }
                 });
 
@@ -137,7 +123,6 @@ Ext.define("EAM.custom.external_osobja", {
             } catch (e) {
                 console.error("Erro na requisição do campo UDF50.", e);
             }
-
             return "";
         }
 
