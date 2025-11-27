@@ -77,16 +77,17 @@ Ext.define("EAM.custom.external_osobja", {
                     url: "/web/base/LOVPOP",
                     method: "POST",
                     params: {
+                        // Este dados são em encontrados de em paylod. 
                         popup: true,
-                        GRID_NAME: "LVUDFCD",
-                        GRID_TYPE: "LOV",
-                        REQUEST_TYPE: "LOV.HEAD_DATA.STORED",
-                        LOV_TAGNAME: "udfchar50",
-                        usagetype: "lov",
-                        USER_FUNCTION_NAME: "OSOBJA",
-                        CURRENT_TAB_NAME: "HDR",
+                        GRID_NAME: "LVUDFCD", // "GRIDNAME"
+                        GRID_TYPE: "LOV",  // viewtype
+                        REQUEST_TYPE: "LOV.HEAD_DATA.STORED", // REQUEST_TYPE_META
+                        LOV_TAGNAME: "udfchar50", // nome do campo mesmo
+                        usagetype: "lov", // repete o viewtype, mas minusculo.
+                        USER_FUNCTION_NAME: "OSOBJA", // nome da tela
+                        CURRENT_TAB_NAME: "HDR", // nome da aba da tela.
 
-                        LOV_ALIAS_NAME_1: "param.rentity",
+                        LOV_ALIAS_NAME_1: "param.rentity", 
                         LOV_ALIAS_VALUE_1: "OBJ",
                         LOV_ALIAS_TYPE_1: "text",
 
