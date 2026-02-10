@@ -158,28 +158,5 @@ Ext.define("EAM.custom.external_wswoup", {
       }
       };
 
-
-      /*
-      return {
-      '[extensibleFramework] [tabName=HDR] [name=reportedby]': {
-      
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      }
-      }
-*/
   }
 });
