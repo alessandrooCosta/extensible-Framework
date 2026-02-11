@@ -11,7 +11,7 @@ Ext.define("EAM.custom.external_wuple1", {
           } catch (err) {
             return;
           }
-          
+
           if (!grid) return;
           if (grid._wuple1_initialized) return; 
           grid._wuple1_initialized = true;
@@ -74,7 +74,7 @@ Ext.define("EAM.custom.external_wuple1", {
                 SYSTEM_FUNCTION_NAME: 'WSJOBS',
                 CURRENT_TAB_NAME: 'LST',
                 COMPONENT_INFO_TYPE: 'DATA_ONLY',
-                filterfields: 'workordernum',  //  Isso pode precisar ser ajustado com base no nome real do campo usado no modelo de dados da grade (WSJOBS). Mas acredito que seja o mesmo
+                filterfields: 'workordernum',  //  Isso pode precisar ser ajustado com base no nome real do campo usado no modelo de dados da grade (WSJOBS). 
                 filteroperator: 'IN',
                 filtervalue: codes.join(',')
               }
@@ -183,9 +183,9 @@ Ext.define("EAM.custom.external_wuple1", {
             if (type === 'M04') return '#D9EAD3'; // MANUTENCAO PREDITIVA PERIODICA
             if (type === 'M05') return '#00B0F0'; // ROTAS DE INSPECAO
             if (type === 'M06') return '#D9B2D9'; // MELHORIAS
+            if (type === 'M09') return '#A6A6A6'; // CALIBRAÇÃO
             if (type === 'M10') return '#D97800'; // INFRAESTRUTURA
-
-            // M07, M08, M09 e M11: sem cor
+            // M07, M08 e M11: sem cor
             return null;
           }
           

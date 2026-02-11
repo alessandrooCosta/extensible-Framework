@@ -215,9 +215,9 @@ Ext.define("EAM.custom.external_wuple1", {
             if (type === 'M04') return '#D9EAD3'; // MANUTENCAO PREDITIVA PERIODICA
             if (type === 'M05') return '#00B0F0'; // ROTAS DE INSPECAO
             if (type === 'M06') return '#D9B2D9'; // MELHORIAS
+            if (type === 'M09') return '#A6A6A6'; // CALIBRAÇÃO
             if (type === 'M10') return '#D97800'; // INFRAESTRUTURA
-
-            // M07, M08, M09 e M11: sem cor
+            // M07, M08 e M11: sem cor
             return null;
           }
           
@@ -252,7 +252,6 @@ Ext.define("EAM.custom.external_wuple1", {
             var notApplied = 0;
             var woColumnIndexMap = getWoColumnIndexMap();
 
-
             for (var i = 0; i < gridStore.getCount(); i++) {
               try {
                 var rec = gridStore.getAt(i);
@@ -283,7 +282,6 @@ Ext.define("EAM.custom.external_wuple1", {
             }
           }
           
-
           // Simples utilitário: particiona um array em chunks de tamanho 'size'.
           function chunk(arr, size) {
             var out = [];
@@ -328,7 +326,6 @@ Ext.define("EAM.custom.external_wuple1", {
             next();
           }
 
-          
           // Rotina de diagnóstico executada uma vez para coletar amostras e expor window.WUPLE1_DIAG.
           // Útil para debug em produção sem interromper fluxo principal.
           function runWsJobsDiagnostics() {
