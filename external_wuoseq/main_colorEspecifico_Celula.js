@@ -1,3 +1,6 @@
+// Este código customiza a tela WUOSEQ, aba LST, para colorir linhas e células específicas
+// baseado nos valores dos campos 'evt_status' e 'evt_type'.
+
 Ext.define("EAM.custom.external_wuoseq", {
     extend: "EAM.custom.AbstractExtensibleFramework",
     getSelectors: function () {

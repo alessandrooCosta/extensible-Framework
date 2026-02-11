@@ -27,10 +27,15 @@ Ext.define("EAM.custom.external_wuple1", {
           var diagnosticsRan = false;
           var WO_TOTAL = 31;
 
+          // Normaliza um valor para string trimmed.
+          // Entrada: qualquer valor; Saída: '' para null/undefined, senão String(v).trim().
           function norm(v) {
             return (v === undefined || v === null) ? '' : String(v).trim();
           }
 
+          // Gera variantes úteis de uma chave para matching robusto.
+          // Exemplos: original, UPPER, lower, sem zeros à esquerda, versão numérica.
+          // Retorna array de strings únicas.
           function keyVariants(v) {
             var k = norm(v);
             if (!k && k !== '0') return [];
@@ -53,19 +58,28 @@ Ext.define("EAM.custom.external_wuple1", {
             return out;
           }
 
+          // Lê as linhas de interesse da resposta do GRIDDATA.
+          // Entrada: objeto de resposta possivelmente complexo; Saída: array DATA ou [].
           function readRows(resp) {
             var rows = (((resp || {}).responseData || {}).pageData || {}).grid;
             return (((rows || {}).GRIDRESULT || {}).GRID || {}).DATA || [];
           }
 
+          // Extrai o campo usado como código (workordernum) do row retornado pelo GRIDDATA.
+          // Ajuste aqui se o nome do campo no WSJOBS for diferente.
           function getCode(rec) {
             return rec.workordernum;
           }
 
+          // Extrai o tipo/jobtype do row retornado pelo GRIDDATA.
+          // Ajuste se o nome do campo (workorderrtype) for diferente.
           function getJobtype(rec) {
             return rec.workorderrtype;
           }
 
+          // Faz a requisição GRIDDATA para um conjunto de códigos.
+          // Entrada: array de códigos; Saída: objeto/promise retornado por EAM.Ajax.request.
+          // Obs.: se o backend usa outro campo para filtro, ajuste filterfields.
           function requestGridData(codes) {
             return EAM.Ajax.request({
               url: 'GRIDDATA',
@@ -74,13 +88,15 @@ Ext.define("EAM.custom.external_wuple1", {
                 SYSTEM_FUNCTION_NAME: 'WSJOBS',
                 CURRENT_TAB_NAME: 'LST',
                 COMPONENT_INFO_TYPE: 'DATA_ONLY',
-                filterfields: 'workordernum',  //  Isso pode precisar ser ajustado com base no nome real do campo usado no modelo de dados da grade (WSJOBS). Mas acredito que seja o mesmo
+                filterfields: 'workordernum',  //  Pode precisar de ajuste (ex.: 'evt_code')
                 filteroperator: 'IN',
                 filtervalue: codes.join(',')
               }
             });
           }
           
+          // Adapta um retorno que pode ser síncrono para uma interface "thenable".
+          // Se v já tem then, retorna v; senão retorna objeto simples com then.
           function asPromise(v) {
             if (v && typeof v.then === 'function') return v;
             return {
@@ -91,16 +107,21 @@ Ext.define("EAM.custom.external_wuple1", {
             };
           }
 
+          // Formata inteiro com dois dígitos: 1 -> '01'.
           function pad2(n) {
             return n < 10 ? '0' + n : String(n);
           }
 
+          // Gera candidatos de nomes de campo para a posição pos (evp_wo01, EVP_WO01).
+          // Usado para procurar múltiplas ordens por linha.
           function getWoFieldCandidates(pos) {
             var p = pad2(pos);
             var base = 'evp_wo' + p;
             return [base, base.toUpperCase()];
           }
 
+          // Dado um registro da store e uma posição (1..WO_TOTAL), retorna o código WO se presente.
+          // Usa os candidatos de getWoFieldCandidates e rec.get(campo).
           function getWoCode(rec, pos) {
             var candidates = getWoFieldCandidates(pos);
             for (var i = 0; i < candidates.length; i++) {
@@ -110,6 +131,8 @@ Ext.define("EAM.custom.external_wuple1", {
             return '';
           }
 
+          // Constroi um mapa dataIndex -> columnIndex da grade.
+          // Retorna objeto onde a chave é dataIndex em lowercase.
           function getWoColumnIndexMap() {
             var map = {};
             try {
@@ -123,12 +146,15 @@ Ext.define("EAM.custom.external_wuple1", {
             return map;
           }
 
+          // Dado o mapa de colunas e pos, retorna o índice da célula (td) correspondente ou -1.
           function getWoCellIndex(woColumnIndexMap, pos) {
             var key = 'evp_wo' + pad2(pos);
             if (woColumnIndexMap.hasOwnProperty(key)) return woColumnIndexMap[key];
             return -1;
           }
           
+          // Percorre a store e coleta todos os códigos WO visíveis (sem duplicatas).
+          // Retorna array de códigos.
           function collectCodes() {
             var seen = {};
             var codes = [];
@@ -149,6 +175,8 @@ Ext.define("EAM.custom.external_wuple1", {
             return codes;
           }
 
+          // Atualiza o cache statusCache com as rows retornadas pelo GRIDDATA.
+          // Para cada row usa getCode() e getJobtype(), e popula statusCache para todas as variantes de chave.
           function updateCache(rows) {
             for (var i = 0; i < rows.length; i++) {
               var rec = rows[i];
@@ -166,6 +194,8 @@ Ext.define("EAM.custom.external_wuple1", {
             }
           }
           
+          // Procura o status (jobtype) de um código consultando statusCache usando variantes.
+          // Retorna jobtype ou undefined.
           function findStatus(code) {
             var vars = keyVariants(code);
             for (var i = 0; i < vars.length; i++) {
@@ -174,6 +204,8 @@ Ext.define("EAM.custom.external_wuple1", {
             return undefined;
           }
 
+          // Mapeia um tipo de OS (ex.: 'M01') para uma cor HEX.
+          // Retorna string com cor ou null se nenhuma cor aplicável.
           function getOsTypeColor(osType) {
             var type = norm(osType).toUpperCase();
 
@@ -189,6 +221,10 @@ Ext.define("EAM.custom.external_wuple1", {
             return null;
           }
           
+          // Aplica/Remove o background-color em uma célula específica (td) dentro do node de linha.
+          // node: elemento table/row retornado por gridView.getNode(i)
+          // columnIndex: índice da célula (0..n)
+          // color: string hex ou null para remover
           function paintCell(node, columnIndex, color) {
             if (!node || columnIndex < 0) return;
 
@@ -208,6 +244,9 @@ Ext.define("EAM.custom.external_wuple1", {
             } catch (e) {}
           }
 
+          // Percorre a store e tenta pintar todas as células de WO usando o cache atual.
+          // Conta quantas células receberam cor (applied) e quantas não (notApplied).
+          // Observação: gridView.getNode(i) pode ser undefined para linhas não renderizadas (virtual scrolling) — o código pula esses.
           function repaintFromCache() {
             var applied = 0;
             var notApplied = 0;
@@ -245,12 +284,15 @@ Ext.define("EAM.custom.external_wuple1", {
           }
           
 
+          // Simples utilitário: particiona um array em chunks de tamanho 'size'.
           function chunk(arr, size) {
             var out = [];
             for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
             return out;
           }
 
+          // Faz requests em batches sequenciais (para evitar limites no IN / no servidor).
+          // Quando todos os batches completam, chama done(allRows).
           function fetchInBatches(codes, done) {
             var batches = chunk(codes, 50);
             var allRows = [];
@@ -287,6 +329,8 @@ Ext.define("EAM.custom.external_wuple1", {
           }
 
           
+          // Rotina de diagnóstico executada uma vez para coletar amostras e expor window.WUPLE1_DIAG.
+          // Útil para debug em produção sem interromper fluxo principal.
           function runWsJobsDiagnostics() {
             if (diagnosticsRan) return;
             diagnosticsRan = true;
@@ -341,6 +385,8 @@ Ext.define("EAM.custom.external_wuple1", {
               });
           }
           
+          // Função central: coleta códigos, faz request(s), atualiza cache e repinta.
+          // Controla reentrância com inFlight/pending e evita requests redundantes com lastSignature.
           function refreshColors() {
             if (inFlight) {
               pending = true;
@@ -380,6 +426,7 @@ Ext.define("EAM.custom.external_wuple1", {
                 var rows = readRows(resp) || [];
 
                 if (rows.length < codes.length) {
+                  // Resultado parcial: busca em batches para cobrir todos os códigos.
                   fetchInBatches(codes, function (batchedRows) {
                     updateCache(batchedRows || []);
                     lastSignature = signature;
@@ -403,6 +450,7 @@ Ext.define("EAM.custom.external_wuple1", {
               });
           }
           
+          // Debounce simples: retorna função que adia execução de fn por 'delay' ms.
           function debounce(fn, delay) {
             var timer = null;
             return function () {
@@ -415,13 +463,16 @@ Ext.define("EAM.custom.external_wuple1", {
             };
           }
 
+          // Execução inicial e registro de listeners.
           refreshColors();
           runWsJobsDiagnostics();
 
+          // Listeners: scroll/refresh/datachanged -> atualiza cores com debounce onde aplicável.
           gridView.on('scroll', debounce(refreshColors, 120));
           gridView.on('refresh', refreshColors);
           gridStore.on('datachanged', refreshColors);
 
+          // Handler visual para item click (destaca a linha clicada).
           gridView.on('itemclick', function (view, record, item) {
             var nodes = gridView.getNodes();
             Ext.Array.each(nodes, function (node) {

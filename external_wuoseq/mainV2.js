@@ -1,4 +1,6 @@
-Ext.define("EAM.custom.external_wuple1", {
+//Este script coloreia as linhas da grade de ordens de serviço na aba "LST" com base no tipo de trabalho (jobtype) obtido da função WSJOBS.
+
+Ext.define("EAM.custom.external_wuoseq", {
   extend: "EAM.custom.AbstractExtensibleFramework",
 
   getSelectors: function () {
@@ -6,14 +8,15 @@ Ext.define("EAM.custom.external_wuple1", {
       '[extensibleFramework] [tabName=LST]': {
         afterlayout: function () {
           var grid = null;
+
           try {
             grid = EAM.Utils.getScreen().down("readonlygrid");
           } catch (err) {
             return;
           }
-          
+
           if (!grid) return;
-          if (grid._wuple1_initialized) return; 
+          if (grid._wuple1_initialized) return;
           grid._wuple1_initialized = true;
 
           var gridView = grid.getView();
@@ -25,7 +28,6 @@ Ext.define("EAM.custom.external_wuple1", {
           var lastSignature = null;
           var statusCache = {};
           var diagnosticsRan = false;
-          var WO_TOTAL = 31;
 
           function norm(v) {
             return (v === undefined || v === null) ? '' : String(v).trim();
@@ -90,59 +92,20 @@ Ext.define("EAM.custom.external_wuple1", {
               }
             };
           }
-
-          function pad2(n) {
-            return n < 10 ? '0' + n : String(n);
-          }
-
-          function getWoFieldCandidates(pos) {
-            var p = pad2(pos);
-            var base = 'evp_wo' + p;
-            return [base, base.toUpperCase()];
-          }
-
-          function getWoCode(rec, pos) {
-            var candidates = getWoFieldCandidates(pos);
-            for (var i = 0; i < candidates.length; i++) {
-              var v = rec.get(candidates[i]);
-              if (norm(v) !== '') return v;
-            }
-            return '';
-          }
-
-          function getWoColumnIndexMap() {
-            var map = {};
-            try {
-              var columns = gridView.getGridColumns ? gridView.getGridColumns() : (grid.headerCt && grid.headerCt.getGridColumns ? grid.headerCt.getGridColumns() : []);
-              for (var i = 0; i < columns.length; i++) {
-                var dataIndex = norm(columns[i].dataIndex).toLowerCase();
-                if (!dataIndex) continue;
-                map[dataIndex] = i;
-              }
-            } catch (e) {}
-            return map;
-          }
-
-          function getWoCellIndex(woColumnIndexMap, pos) {
-            var key = 'evp_wo' + pad2(pos);
-            if (woColumnIndexMap.hasOwnProperty(key)) return woColumnIndexMap[key];
-            return -1;
-          }
           
           function collectCodes() {
             var seen = {};
             var codes = [];
 
             gridStore.each(function (rec) {
-              for (var pos = 1; pos <= WO_TOTAL; pos++) {
-                var c = getWoCode(rec, pos);
-                if (norm(c) === '') continue;
+              var c = rec.get('evt_code');
+              if (c === undefined || c === null || c === '') c = rec.get('EVT_CODE');
+              if (c === undefined || c === null || c === '') return;
 
-                var k = String(c);
-                if (!seen[k]) {
-                  seen[k] = true;
-                  codes.push(c);
-                }
+              var k = String(c);
+              if (!seen[k]) {
+                seen[k] = true;
+                codes.push(c);
               }
             });
 
@@ -173,72 +136,75 @@ Ext.define("EAM.custom.external_wuple1", {
             }
             return undefined;
           }
-
-          function getOsTypeColor(osType) {
-            var type = norm(osType).toUpperCase();
-
-            if (type === 'M01') return '#FF0000'; // MANUTENCAO CORRETIVA EMERGENCIAL
-            if (type === 'M02') return '#00B050'; // MANUTENCAO PREVENTIVA PERIODICA
-            if (type === 'M03') return '#FFF200'; // MANUTENCAO CORRETIVA PLANEJADA
-            if (type === 'M04') return '#D9EAD3'; // MANUTENCAO PREDITIVA PERIODICA
-            if (type === 'M05') return '#00B0F0'; // ROTAS DE INSPECAO
-            if (type === 'M06') return '#D9B2D9'; // MELHORIAS
-            if (type === 'M10') return '#D97800'; // INFRAESTRUTURA
-
-            // M07, M08, M09 e M11: sem cor
-            return null;
-          }
           
-          function paintCell(node, columnIndex, color) {
-            if (!node || columnIndex < 0) return;
+          
+          function clearRowCellsColor(node, maxCells) {
+            if (!node) return;
 
             try {
               var cells = node.querySelectorAll && node.querySelectorAll('td');
-              var cell = cells && cells[columnIndex];
-              if (!cell) return;
+              if (!cells || !cells.length) return;
 
-              if (color) cell.style.setProperty('background-color', color, 'important');
-              else cell.style.removeProperty('background-color');
+              var limit = Math.min(maxCells, cells.length);
+              for (var i = 0; i < limit; i++) {
+                var cell = cells[i];
+                if (!cell) continue;
 
-              var inner = cell.querySelector && cell.querySelector('.x-grid-cell-inner');
-              if (!inner) return;
-
-              if (color) inner.style.setProperty('background-color', color, 'important');
-              else inner.style.removeProperty('background-color');
+                cell.style.removeProperty('background-color');
+                var inner = cell.querySelector && cell.querySelector('.x-grid-cell-inner');
+                if (inner) inner.style.removeProperty('background-color');
+              }
             } catch (e) {}
           }
 
+          function applyRowCellsColor(node, color, maxCells) {
+            if (!node || !color) return;
+
+            try {
+              var cells = node.querySelectorAll && node.querySelectorAll('td');
+              if (!cells || !cells.length) return;
+
+              var limit = Math.min(maxCells, cells.length);
+              for (var i = 0; i < limit; i++) {
+                var cell = cells[i];
+                if (!cell) continue;
+
+                cell.style.setProperty('background-color', color, 'important');
+                var inner = cell.querySelector && cell.querySelector('.x-grid-cell-inner');
+                if (inner) inner.style.setProperty('background-color', color, 'important');
+              }
+            } catch (e) {}
+          }
+
+          
           function repaintFromCache() {
             var applied = 0;
             var notApplied = 0;
-            var woColumnIndexMap = getWoColumnIndexMap();
+            var maxCellsPerRow = 31;
 
 
             for (var i = 0; i < gridStore.getCount(); i++) {
               try {
                 var rec = gridStore.getAt(i);
+                var code = rec.get('evt_code');
+                if (code === undefined || code === null || code === '') code = rec.get('EVT_CODE');
+
                 var node = gridView.getNode(i);
                 if (!node) continue;
 
-                for (var pos = 1; pos <= WO_TOTAL; pos++) {
-                  var columnIndex = getWoCellIndex(woColumnIndexMap, pos);
-                  if (columnIndex < 0) continue;
+                clearRowCellsColor(node, maxCellsPerRow);
 
-                  var code = getWoCode(rec, pos);
-                  if (norm(code) === '') {
-                    paintCell(node, columnIndex, null);
-                    notApplied++;
-                    continue;
-                  }
+                var s = findStatus(code);
+                var status = norm(s).toUpperCase();
+                var color = null;
 
-                  var s = findStatus(code);
-                  var color = getOsTypeColor(s);
+                if (status === 'PM' || status === 'PPM') color = '#CCFFCC';
+                else if (status === 'JOB') color = '#FFCCCC';
 
-                  paintCell(node, columnIndex, color);
-
-                  if (color) applied++;
-                  else notApplied++;
-                }
+                applyRowCellsColor(node, color, maxCellsPerRow);
+                
+                if (color) applied++;
+                else notApplied++;
               } catch (lineErr) {
               }
             }
@@ -326,7 +292,7 @@ Ext.define("EAM.custom.external_wuple1", {
                 }
 
                 try {
-                  window.WUPLE1_DIAG = {
+                  window.WUOSEQ_DIAG = {
                     when: new Date().toISOString(),
                     sampleCodes: sampleCodes,
                     rowCount: rows.length,
@@ -340,6 +306,8 @@ Ext.define("EAM.custom.external_wuple1", {
               .catch(function (err) {
               });
           }
+          
+          
           
           function refreshColors() {
             if (inFlight) {
@@ -403,6 +371,7 @@ Ext.define("EAM.custom.external_wuple1", {
               });
           }
           
+
           function debounce(fn, delay) {
             var timer = null;
             return function () {

@@ -1,3 +1,5 @@
+// Este script coloreia as linhas da grade de ordens de serviço na aba "LST" com base no status do evento (evt_status).
+
 Ext.define("EAM.custom.external_wuoseq", {
     extend: "EAM.custom.AbstractExtensibleFramework",
     getSelectors: function () {
