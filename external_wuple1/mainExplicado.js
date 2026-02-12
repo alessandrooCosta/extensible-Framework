@@ -74,7 +74,8 @@ Ext.define("EAM.custom.external_wuple1", {
           // Extrai o tipo/jobtype do row retornado pelo GRIDDATA.
           // Ajuste se o nome do campo (workorderrtype) for diferente.
           function getJobtype(rec) {
-            return rec.workorderrtype;
+            return rec.workordertype_display;
+          // return rec.workorderrtype;
           }
 
           // Faz a requisição GRIDDATA para um conjunto de códigos.
@@ -209,14 +210,14 @@ Ext.define("EAM.custom.external_wuple1", {
           function getOsTypeColor(osType) {
             var type = norm(osType).toUpperCase();
 
-            if (type === 'M01') return '#FF0000'; // MANUTENCAO CORRETIVA EMERGENCIAL
-            if (type === 'M02') return '#00B050'; // MANUTENCAO PREVENTIVA PERIODICA
-            if (type === 'M03') return '#FFF200'; // MANUTENCAO CORRETIVA PLANEJADA
-            if (type === 'M04') return '#D9EAD3'; // MANUTENCAO PREDITIVA PERIODICA
-            if (type === 'M05') return '#00B0F0'; // ROTAS DE INSPECAO
-            if (type === 'M06') return '#D9B2D9'; // MELHORIAS
-            if (type === 'M09') return '#A6A6A6'; // CALIBRAÇÃO
-            if (type === 'M10') return '#D97800'; // INFRAESTRUTURA
+            if (type === 'M01 - MANUTENCAO CORRETIVA EMERGENCIAL' || type === 'M01' || type.indexOf('M01') === 0) return '#FF0000'; // MANUTENCAO CORRETIVA EMERGENCIAL
+            if (type === 'M02 - MANUTENÇÃO PREVENTIVA PERIÓDICA' || type === 'M02' || type.indexOf('M02') === 0) return '#00B050'; // MANUTENCAO PREVENTIVA PERIODICA
+            if (type === 'M03 - MANUTENCAO CORRETIVA PLANEJADA' || type === 'M03' || type.indexOf('M03') === 0) return '#FFF200'; // MANUTENCAO CORRETIVA PLANEJADA
+            if (type === 'M04 - MANUTENCAO PREDITIVA PERIODICA' || type === 'M04' || type.indexOf('M04') === 0) return '#D9EAD3'; // MANUTENCAO PREDITIVA PERIODICA
+            if (type === 'M05 - ROTAS DE INSPECAO' || type === 'M05' || type.indexOf('M05') === 0) return '#00B0F0'; // ROTAS DE INSPECAO
+            if (type === 'M06 - MELHORIAS' || type === 'M06' || type.indexOf('M06') === 0) return '#D9B2D9'; // MELHORIAS
+            if (type === 'M09 - CALIBRACAO' || type === 'M09' || type.indexOf('M09') === 0) return '#A6A6A6'; // CALIBRACAO
+            if (type === 'M10 - INFRAESTRUTURA' || type === 'M10' || type.indexOf('M10') === 0) return '#D97800'; // INFRAESTRUTURA
             // M07, M08 e M11: sem cor
             return null;
           }

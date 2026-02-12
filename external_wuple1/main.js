@@ -11,7 +11,7 @@ Ext.define("EAM.custom.external_wuple1", {
           } catch (err) {
             return;
           }
-
+          
           if (!grid) return;
           if (grid._wuple1_initialized) return; 
           grid._wuple1_initialized = true;
@@ -63,7 +63,8 @@ Ext.define("EAM.custom.external_wuple1", {
           }
 
           function getJobtype(rec) {
-            return rec.workorderrtype;
+            return rec.workordertype_display;
+          // return rec.workorderrtype;
           }
 
           function requestGridData(codes) {
@@ -74,13 +75,13 @@ Ext.define("EAM.custom.external_wuple1", {
                 SYSTEM_FUNCTION_NAME: 'WSJOBS',
                 CURRENT_TAB_NAME: 'LST',
                 COMPONENT_INFO_TYPE: 'DATA_ONLY',
-                filterfields: 'workordernum',  //  Isso pode precisar ser ajustado com base no nome real do campo usado no modelo de dados da grade (WSJOBS). 
+                filterfields: 'workordernum',
                 filteroperator: 'IN',
                 filtervalue: codes.join(',')
               }
             });
           }
-          
+
           function asPromise(v) {
             if (v && typeof v.then === 'function') return v;
             return {
@@ -128,7 +129,7 @@ Ext.define("EAM.custom.external_wuple1", {
             if (woColumnIndexMap.hasOwnProperty(key)) return woColumnIndexMap[key];
             return -1;
           }
-          
+
           function collectCodes() {
             var seen = {};
             var codes = [];
@@ -165,7 +166,7 @@ Ext.define("EAM.custom.external_wuple1", {
               }
             }
           }
-          
+
           function findStatus(code) {
             var vars = keyVariants(code);
             for (var i = 0; i < vars.length; i++) {
@@ -176,19 +177,18 @@ Ext.define("EAM.custom.external_wuple1", {
 
           function getOsTypeColor(osType) {
             var type = norm(osType).toUpperCase();
-
-            if (type === 'M01') return '#FF0000'; // MANUTENCAO CORRETIVA EMERGENCIAL
-            if (type === 'M02') return '#00B050'; // MANUTENCAO PREVENTIVA PERIODICA
-            if (type === 'M03') return '#FFF200'; // MANUTENCAO CORRETIVA PLANEJADA
-            if (type === 'M04') return '#D9EAD3'; // MANUTENCAO PREDITIVA PERIODICA
-            if (type === 'M05') return '#00B0F0'; // ROTAS DE INSPECAO
-            if (type === 'M06') return '#D9B2D9'; // MELHORIAS
-            if (type === 'M09') return '#A6A6A6'; // CALIBRAÇÃO
-            if (type === 'M10') return '#D97800'; // INFRAESTRUTURA
+            if (type === 'M01 - MANUTENCAO CORRETIVA EMERGENCIAL' || type === 'M01' || type.indexOf('M01') === 0) return '#FF0000'; // MANUTENCAO CORRETIVA EMERGENCIAL
+            if (type === 'M02 - MANUTENÇÃO PREVENTIVA PERIÓDICA' || type === 'M02' || type.indexOf('M02') === 0) return '#00B050'; // MANUTENCAO PREVENTIVA PERIODICA
+            if (type === 'M03 - MANUTENCAO CORRETIVA PLANEJADA' || type === 'M03' || type.indexOf('M03') === 0) return '#FFF200'; // MANUTENCAO CORRETIVA PLANEJADA
+            if (type === 'M04 - MANUTENCAO PREDITIVA PERIODICA' || type === 'M04' || type.indexOf('M04') === 0) return '#D9EAD3'; // MANUTENCAO PREDITIVA PERIODICA
+            if (type === 'M05 - ROTAS DE INSPECAO' || type === 'M05' || type.indexOf('M05') === 0) return '#00B0F0'; // ROTAS DE INSPECAO
+            if (type === 'M06 - MELHORIAS' || type === 'M06' || type.indexOf('M06') === 0) return '#D9B2D9'; // MELHORIAS
+            if (type === 'M09 - CALIBRACAO' || type === 'M09' || type.indexOf('M09') === 0) return '#A6A6A6'; // CALIBRACAO
+            if (type === 'M10 - INFRAESTRUTURA' || type === 'M10' || type.indexOf('M10') === 0) return '#D97800'; // INFRAESTRUTURA
             // M07, M08 e M11: sem cor
             return null;
           }
-          
+ 
           function paintCell(node, columnIndex, color) {
             if (!node || columnIndex < 0) return;
 
@@ -212,7 +212,6 @@ Ext.define("EAM.custom.external_wuple1", {
             var applied = 0;
             var notApplied = 0;
             var woColumnIndexMap = getWoColumnIndexMap();
-
 
             for (var i = 0; i < gridStore.getCount(); i++) {
               try {
@@ -243,7 +242,6 @@ Ext.define("EAM.custom.external_wuple1", {
               }
             }
           }
-          
 
           function chunk(arr, size) {
             var out = [];
@@ -286,7 +284,6 @@ Ext.define("EAM.custom.external_wuple1", {
             next();
           }
 
-          
           function runWsJobsDiagnostics() {
             if (diagnosticsRan) return;
             diagnosticsRan = true;
@@ -402,8 +399,8 @@ Ext.define("EAM.custom.external_wuple1", {
                 if (pending) refreshColors();
               });
           }
-          
-          function debounce(fn, delay) {
+
+            function debounce(fn, delay) {
             var timer = null;
             return function () {
               var ctx = this;
@@ -417,11 +414,9 @@ Ext.define("EAM.custom.external_wuple1", {
 
           refreshColors();
           runWsJobsDiagnostics();
-
           gridView.on('scroll', debounce(refreshColors, 120));
           gridView.on('refresh', refreshColors);
           gridStore.on('datachanged', refreshColors);
-
           gridView.on('itemclick', function (view, record, item) {
             var nodes = gridView.getNodes();
             Ext.Array.each(nodes, function (node) {
